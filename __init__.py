@@ -1,0 +1,240 @@
+"""
+Muslim Calendar - Integration Home Assistant pour les heures de priere islamiques et le calendrier Hijri.
+"""
+
+import logging
+from datetime import date, timedelta
+from typing import Dict, Optional
+
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.device_registry import DeviceEntryType
+from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+
+from .const import (
+    DOMAIN,
+    DEVICE_NAME,
+    DEVICE_MANUFACTURER,
+    DEVICE_MODEL,
+    CALC_METHODS,
+    HIJRI_MONTHS_FR,
+    ISLAMIC_EVENTS,
+)
+
+_LOGGER = logging.getLogger(__name__)
+
+
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Configure l'integration via l'UI Home Assistant."""
+    coordinator = SalatDataUpdateCoordinator(hass, entry)
+    await coordinator.async_config_entry_first_refresh()
+
+    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
+
+    await hass.config_entries.async_forward_entry_setups(entry, ["sensor"])
+
+    return True
+
+
+async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Supprime l'integration."""
+    if unload_ok := await hass.config_entries.async_unload_platforms(entry, ["sensor"])):
+        hass.data[DOMAIN].pop(entry.entry_id)
+    return unload_ok
+
+
+# =============================================================================
+# COORDINATOR
+# =============================================================================
+
+class SalatDataUpdateCoordinator(DataUpdateCoordinator):
+    """Coordonne les donnes Salat (mise a jour toutes les heures)."""
+
+    def __init__(self, hass: HomeAssistant, entry: ConfigEntry):
+        self.entry = entry
+        self._config = entry.data
+        super().__init__(
+            hass,
+            _LOGGER,
+            name=DOMAIN,
+            update_interval=timedelta(hours=1),
+        )
+
+    @property
+    def config(self) -> Dict:
+        return self._config
+
+    def _get_device_info(self) -> DeviceInfo:
+        return DeviceInfo(
+            identifiers={(DOMAIN, f"{DOMAIN}_{self._config.get('lat', 0)}_{self._config.get('lon', 0)}")},
+            name=DEVICE_NAME,
+            manufacturer=DEVICE_MANUFACTURER,
+            model=DEVICE_MODEL,
+            entry_type=DeviceEntryType.SERVICE,
+        )
+
+    async def _async_update_data(self):
+        """Recalcule toutes les donnees Salat."""
+        today = date.today()
+
+        lat = self._config.get("lat", 47.4)
+        lon = self._config.get("lon", -0.64)
+        calc_method = self._config.get("method", "isna")
+        adjustments = {
+            "Fajr": self._config.get("adjust_fajr", 0),
+            "Dhuhr": self._config.get("adjust_dhuhr", 0),
+            "Asr": self._config.get("adjust_asr", 0),
+            "Maghrib": self._config.get("adjust_maghrib", 0),
+            "Isha": self._config.get("adjust_isha", 0),
+        }
+        iqamah_offsets = {
+            "Fajr": self._config.get("iqamah_fajr", 20),
+            "Dhuhr": self._config.get("iqamah_dhuhr", 15),
+            "Asr": self._config.get("iqamah_asr", 15),
+            "Maghrib": self._config.get("iqamah_maghrib", 10),
+            "Isha": self._config.get("iqamah_isha", 15),
+        }
+
+        # Heures de priere
+        prayer_times = await self.hass.async_add_executor_job(
+            _calculate_prayer_times, lat, lon, calc_method, adjustments, today
+        )
+
+        # Iqamah
+        iqamah_times = _calculate_iqamah(prayer_times, iqamah_offsets)
+
+        # Dates Hijri
+        hijri_info = _get_hijri_info(today)
+
+        # Mois Hijri
+        month_starts = _find_month_starts(today, 12)
+        next_month = month_starts[0] if month_starts else None
+
+        # Evenements
+        all_events = _find_events(today, 10)
+        next_event = all_events[0] if all_events else None
+
+        return {
+            "prayer_times": prayer_times,
+            "iqamah_times": iqamah_times,
+            "hijri_info": hijri_info,
+            "month_starts": month_starts,
+            "next_month": next_month,
+            "all_events": all_events,
+            "next_event": next_event,
+            "tomorrow_prayer_times": await self.hass.async_add_executor_job(
+                _calculate_prayer_times, lat, lon, calc_method, adjustments,
+                today + timedelta(days=1)
+            ),
+        }
+
+
+# =============================================================================
+# FONCTIONS DE CALCUL (synchronous, running in executor)
+# =============================================================================
+
+def _add_minutes(time_str: str, minutes: int) -> str:
+    if not time_str or time_str == "--:----":
+        return "--:----"
+    try:
+        parts = time_str.split(":")
+        hour, minute = int(parts[0]), int(parts[1])
+        total = hour * 60 + minute + minutes
+        return f"{(total // 60) % 24:02d}:{total % 60:02d}"
+    except Exception:
+        return time_str
+
+
+def _calculate_prayer_times(
+    lat: float, lon: float, calc_method: str,
+    adjustments: Dict[str, int], target_date
+) -> Dict[str, str]:
+    try:
+        from prayer_times_calculator import PrayerTimesCalculator
+        calc = PrayerTimesCalculator(
+            latitude=lat, longitude=lon,
+            calculation_method=calc_method,
+            date=str(target_date),
+        )
+        raw = calc.fetch_prayer_times()
+    except Exception as e:
+        _LOGGER.error(f"Prayer times calculation failed: {e}")
+        return {}
+
+    result = {}
+    for prayer in ["Fajr", "Sunrise", "Dhuhr", "Asr", "Maghrib", "Isha", "Midnight"]:
+        key = prayer.lower()
+        time_str = raw.get(prayer)
+        if time_str:
+            result[key] = _add_minutes(time_str, adjustments.get(prayer, 0))
+        else:
+            result[key] = "--:----"
+    return result
+
+
+def _calculate_iqamah(prayer_times: Dict, offsets: Dict) -> Dict[str, str]:
+    result = {}
+    for prayer in ["fajr", "dhuhr", "asr", "maghrib", "isha"]:
+        time = prayer_times.get(prayer, "--:----")
+        offset = offsets.get(prayer.title(), 15)
+        result[f"iqamah_{prayer}"] = _add_minutes(time, offset)
+    return result
+
+
+def _get_hijri_info(target_date) -> Dict[str, int]:
+    try:
+        import hijri_converter
+        h = hijri_converter.Gregorian(target_date.year, target_date.month, target_date.day).to_hijri()
+        return {"day": h.day, "month": h.month, "year": h.year}
+    except Exception:
+        return {"day": 1, "month": 1, "year": 1445}
+
+
+def _find_events(start_date, count: int = 10) -> list:
+    events = []
+    current = start_date
+    for _ in range(400):
+        if len(events) >= count:
+            break
+        try:
+            import hijri_converter
+            h = hijri_converter.Gregorian(current.year, current.month, current.day).to_hijri()
+            key = (h.month, h.day)
+            if key in ISLAMIC_EVENTS:
+                ev = dict(ISLAMIC_EVENTS[key])
+                ev["date"] = current.isoformat()
+                ev["gregorian"] = current.strftime("%Y-%m-%d")
+                ev["hijri"] = f"{h.day:02d}-{h.month:02d}-{h.year}"
+                events.append(ev)
+            current += timedelta(days=1)
+        except Exception:
+            current += timedelta(days=1)
+    return events
+
+
+def _find_month_starts(start_date, count: int = 12) -> list:
+    starts = []
+    current = start_date
+    prev_month = None
+    found = 0
+    for _ in range(400):
+        if found >= count:
+            break
+        try:
+            import hijri_converter
+            h = hijri_converter.Gregorian(current.year, current.month, current.day).to_hijri()
+            if prev_month is not None and h.month != prev_month:
+                starts.append({
+                    "date": current.isoformat(),
+                    "gregorian": current.strftime("%Y-%m-%d"),
+                    "hijri": f"{h.day:02d}-{h.month:02d}-{h.year}",
+                    "month": h.month,
+                    "month_name": HIJRI_MONTHS_FR.get(h.month, "?"),
+                })
+                found += 1
+            prev_month = h.month
+            current += timedelta(days=1)
+        except Exception:
+            current += timedelta(days=1)
+    return starts
