@@ -1,6 +1,6 @@
 {
   "name": "Muslim Calendar",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "codeowners": ["@lunarok"],
   "documentation": "https://github.com/lunarok/muslim_calendar",
   "issue_tracker": "https://github.com/lunarok/muslim_calendar/issues",

@@ -7,35 +7,94 @@ Plugin Home Assistant Community Store (HACS) pour les heures de priere islamique
 - **15 methodes de calcul** des heures de priere (ISNA, Makkah, MWL, Karachi, France, etc.)
 - **Ajustement numerique** de chaque priere obligatoire (+/- en minutes)
 - **Iqamah parametrable** par priere (decalage en minutes)
-- **Calendrier Hijri** : jour, mois, annee separes, mois suivants, evenements majeurs
-- **1 Device** avec **~20 Entites** dans Home Assistant
+- **Localisation automatique** via les zones Home Assistant et les apps mobiles
+- **1 Device** avec **~15 Entites** dans Home Assistant
 - **Configuration via l'UI** Home Assistant (plus besoin de fichier YAML)
 
-## Heures de priere publiees
+## Entites creees
+
+### Heures de priere (7 capteurs)
 
 | Entite | Description |
 |---|---|
-| `sensor.salat_fajr` | Fajr |
-| `sensor.salat_lever_du_soleil` | Lever du soleil (Shuruuq) |
-| `sensor.salat_dhuhr` | Dhuhr |
-| `sensor.salat_asr` | Asr |
-| `sensor.salat_maghrib` | Maghrib |
-| `sensor.salat_isha` | Isha |
-| `sensor.salat_minuit` | Minuit |
-| `sensor.salat_imsak` | Imsak (10 min avant Fajr) |
-| `sensor.salat_fin_fajr` | Fin du creneau Fajr (= Imsak) |
-| `sensor.salat_debut_creneau_interdit` | Debut creneau interdit (Fajr) |
-| `sensor.salat_fin_creneau_interdit` | Fin creneau interdit (Sunrise) |
-| `sensor.salat_iqamah_*` | Heures Iqamah (Fajr, Dhuhr, Asr, Maghrib, Isha) |
-| `sensor.salat_jour_hijri` | Jour Hijri (entier) |
-| `sensor.salat_mois_hijri` | Mois Hijri (entier) |
-| `sensor.salat_annee_hijri` | Annee Hijri (entier) |
-| `sensor.salat_mois_hijri` | Mois Hijri avec attributes (prochain mois + 12 debuts) |
-| `sensor.salat_evenements_islamiques` | Evenements avec attributes (prochain + 10 evenements) |
+| `sensor.muslim_calendar_prayer_fajr` | Fajr |
+| `sensor.muslim_calendar_prayer_shuruq` | Shuruq (Lever du soleil) |
+| `sensor.muslim_calendar_prayer_dhuhr` | Dhuhr |
+| `sensor.muslim_calendar_prayer_asr` | Asr |
+| `sensor.muslim_calendar_prayer_maghrib` | Maghrib |
+| `sensor.muslim_calendar_prayer_isha` | Isha |
+| `sensor.muslim_calendar_prayer_midnight` | Minuit |
+
+### Iqamah (5 capteurs)
+
+| Entite | Description |
+|---|---|
+| `sensor.muslim_calendar_iqamah_fajr` | Iqamah Fajr |
+| `sensor.muslim_calendar_iqamah_dhuhr` | Iqamah Dhuhr |
+| `sensor.muslim_calendar_iqamah_asr` | Iqamah Asr |
+| `sensor.muslim_calendar_iqamah_maghrib` | Iqamah Maghrib |
+| `sensor.muslim_calendar_iqamah_isha` | Iqamah Isha |
+
+### Capteurs speciaux (2 capteurs)
+
+| Entite | Description |
+|---|---|
+| `sensor.muslim_calendar_special_imsak` | Imsak (10 min avant Fajr) |
+| `sensor.muslim_calendar_forbidden_slots` | Creneaux interdits a la priere |
+
+### Capteur Date Hijri (1 capteur, 5 attributs)
+
+**State** : date complete (ex: `10 Ramadan 1447`)
+
+| Attribut | Description |
+|---|---|
+| `hijri_day` | Jour Hijri (entier) |
+| `hijri_month` | Mois Hijri (entier) |
+| `hijri_month_full` | Nom complet du mois |
+| `hijri_year` | Annee Hijri (entier) |
+| `hijri_date_full` | Date complete |
+
+### Capteur Mois Hijri (1 capteur, attributs)
+
+**State** : prochain mois Hijri
+
+| Attribut | Description |
+|---|---|
+| `next_month_name` | Nom du prochain mois |
+| `next_month_date` | Date gregorienne du debut |
+| `next_month_hijri` | Date Hijri du debut |
+| `months` | Liste des 12 prochains debuts de mois |
+
+### Capteur Evenements Islamiques (1 capteur, attributs)
+
+**State** : prochain evenement
+
+| Attribut | Description |
+|---|---|
+| `next_event_name` | Nom du prochain evenement |
+| `next_event_date` | Date gregorienne |
+| `next_event_hijri` | Date Hijri |
+| `next_event_arabic` | Nom en arabe |
+| `events` | Liste des 10 prochains evenements |
+
+### Capteur Creneaux Interdits (1 capteur, 6 attributs)
+
+**State** : `slot1_start` (debut du slot 1)
+
+Les 3 slots representent les moments ou la priere n'est pas recommandee :
+
+| Attribut | Description |
+|---|---|
+| `slot1_start` | Shuruq (lever du soleil) |
+| `slot1_end` | Shuruq + 20 minutes |
+| `slot2_start` | Dhuhr (zawwal) |
+| `slot2_end` | Dhuhr + 20 minutes |
+| `slot3_start` | Maghrib - 20 minutes |
+| `slot3_end` | Maghrib |
 
 ## Installation
 
-### Methode 1 - Via HACS (recommande)
+### Via HACS (recommande)
 
 1. Ouvrez HACS dans Home Assistant
 2. Cliquez sur **Add** → **Custom Repository**
@@ -44,7 +103,7 @@ Plugin Home Assistant Community Store (HACS) pour les heures de priere islamique
 5. Cliquez sur **Download**
 6. Redemarrez Home Assistant
 
-### Methode 2 - Manuel
+### Manuel
 
 ```bash
 cd /config/custom_components/
@@ -54,15 +113,16 @@ git clone https://github.com/lunarok/muslim_calendar.git
 
 ## Configuration
 
-1. Allez dans **Settings → Devices & Services → Add Integration**
-2. Recherchez **Muslim Calendar**
-3. Remplissez les parametres :
-   - **Latitude / Longitude** : coordonnees GPS du lieu
-   - **Methode de calcul** : ISNA, Makkah, MWL, Karachi, France…
-   - **Ajustements** : decalage en minutes pour chaque priere (optionnel)
-   - **Iqamah** : decalage en minutes apres chaque priere (optionnel)
+### Menu de localisation
 
-## Ajustements disponibles
+Le plugin detecte automatiquement :
+
+- **`zone.home`** — votre maison (coordonnees de la zone Home Assistant)
+- **Devices trackers des apps mobiles** — chaque telephone avec l'app Companion installee
+
+Lors de la configuration, selectionnez simplement la localisation desiree dans le menu. Si vous choisissez `Personnalisee`, vous pouvez entrer vos propres coordonnees GPS.
+
+### Ajustements disponibles
 
 | Parametre | Description |
 |---|---|
@@ -77,7 +137,7 @@ git clone https://github.com/lunarok/muslim_calendar.git
 | `iqamah_maghrib` | Delai Iqamah apres Maghrib (default: 10 min) |
 | `iqamah_isha` | Delai Iqamah apres Isha (default: 15 min) |
 
-## Methodes de calcul
+### Methodes de calcul
 
 | Methode | Description |
 |---|---|
@@ -90,47 +150,46 @@ git clone https://github.com/lunarok/muslim_calendar.git
 | `jafari` | Jafari |
 | `france` | France (UOIF) |
 
-## Attributes avances
-
-### Capteur "Mois Hijri"
-- `next_month_name` : nom du prochain mois
-- `next_month_date` : date gregorienne du debut du prochain mois
-- `next_month_hijri` : date Hijri du prochain mois
-- `months` : liste des 12 prochains debuts de mois (name, date, hijri, month)
-
-### Capteur "Evenements Islamiques"
-- `next_event_name` : nom du prochain evenement
-- `next_event_date` : date gregorienne
-- `next_event_hijri` : date Hijri
-- `next_event_arabic` : nom en arabe
-- `events` : liste des 10 prochains evenements (name, date, hijri, arabic)
-
 ## Automatisations exemples
 
 ```yaml
 automation:
-  - alias: "Rappel Fajr"
-    trigger:
-      - platform: time
-        at: "sensor.salat_fajr"
-    action:
-      - service: notify.mobile_app_telephone
-        data:
-          message: "Il est l'heure du Fajr"
-
-  - alias: "Notification Ramadan"
+  - alias: "Notification Debut Ramadan"
     trigger:
       - platform: state
-        entity_id: sensor.salat_evenements_islamiques
+        entity_id: sensor.muslim_calendar_hijri_events
     condition:
       - condition: state
-        entity_id: sensor.salat_evenements_islamiques
+        entity_id: sensor.muslim_calendar_hijri_events
         attribute: next_event_name
         value: "Debut Ramadan"
     action:
       - service: notify.all
         data:
           message: "Le Ramadan commence aujourd'hui !"
+
+  - alias: "Rappel Imsak avant Fajr"
+    trigger:
+      - platform: time
+        at: "sensor.muslim_calendar_special_imsak"
+    action:
+      - service: notify.mobile_app_telephone
+        data:
+          message: "L'Imsak est dans 10 minutes"
+
+  - alias: "Eviter priere en creneau interdit"
+    trigger:
+      - platform: time
+        at: "sensor.muslim_calendar_forbidden_slots"
+    condition:
+      - condition: state
+        entity_id: input_boolean.ma_priere_en_cours
+        state: "on"
+    action:
+      - service: timer.start
+        data:
+          entity_id: timer.delai_priere
+          duration: "00:30:00"
 ```
 
 ## Developpement
@@ -139,12 +198,13 @@ automation:
 # Structure du plugin
 muslim_calendar/
 ├── manifest.json
-├── __init__.py
-├── config_flow.py
-├── const.py
-├── sensor.py
+├── __init__.py           # Integration + coordinator
+├── config_flow.py         # Configuration UI
+├── const.py               # Constantes
+├── sensor.py              # Capteurs
 ├── translations/
 │   └── fr.json
+├── icon.jpg
 └── README.md
 
 # Tests locaux
@@ -156,4 +216,3 @@ pip install hijri-converter prayer-times-calculator
 
 - Bibliotheque `prayer-times-calculator` pour les heures de priere
 - Bibliotheque `hijri-converter` pour les dates Hijri
-- Inspiré du projet `muslim_prayer_companion` de @amaharek
