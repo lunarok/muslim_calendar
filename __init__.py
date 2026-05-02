@@ -3,7 +3,7 @@ Muslim Calendar - Integration Home Assistant pour les heures de priere islamique
 """
 
 import logging
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from typing import Dict
 
 from homeassistant.config_entries import ConfigEntry
@@ -17,6 +17,8 @@ from .const import (
     DEVICE_NAME,
     DEVICE_MANUFACTURER,
     DEVICE_MODEL,
+    DEFAULT_LOCATION,
+    CALC_METHODS,
     HIJRI_MONTHS_FR,
     ISLAMIC_EVENTS,
 )
@@ -106,47 +108,61 @@ class MuslimCalendarDataUpdateCoordinator(DataUpdateCoordinator):
         # Imsak (10 minutes avant Fajr)
         imsak_time = _add_minutes(prayer_times.get("fajr", "--:--"), -10)
 
-        # Creneaux interdits (3 slots)
+        # Tahajud (dernier tiers de la nuit = 2/3 entre Isha et Fajr lendemain)
+        tahajud_time = _calculate_tahajud(
+            prayer_times.get("isha", "--:--"),
+            prayer_times.get("fajr", "--:--")
+        )
+
+        # Creneaux interdits (3 slots) + etat binaire
         shuruq = prayer_times.get("shuruq", "--:--")
         maghrib = prayer_times.get("maghrib", "--:--")
         dhuhr = prayer_times.get("dhuhr", "--:--")
+        forbidden_now = _is_in_forbidden_slot(shuruq, maghrib, dhuhr)
         forbidden_slots = {
             "slot1_start": shuruq,
-            "slot1_end": _add_minutes(shuruq, 20),  # Shuruq + 20 min
+            "slot1_end": _add_minutes(shuruq, 20),
             "slot2_start": dhuhr,
-            "slot2_end": _add_minutes(dhuhr, 20),  # Zawwal Dhuhr + 20 min
-            "slot3_start": _add_minutes(maghrib, -20),  # Maghrib - 20 min
+            "slot2_end": _add_minutes(dhuhr, 20),
+            "slot3_start": _add_minutes(maghrib, -20),
             "slot3_end": maghrib,
         }
 
         # Dates Hijri
         hijri_info = _get_hijri_info(today)
+        hijri_date_full = f"{hijri_info['day']} {HIJRI_MONTHS_FR.get(hijri_info['month'], '?')} {hijri_info['year']}"
+        hijri_info["date_full"] = hijri_date_full
 
         # Mois Hijri
         month_starts = _find_month_starts(today, 12)
         next_month = month_starts[0] if month_starts else None
 
-        # Evenements
-        all_events = _find_events(today, 10)
+        # Evenements - avec attribut par type d'evenement (10 types)
+        all_events = _find_events(today, 365)  # chercher sur 1 an
+        event_by_type = _build_event_index(all_events)
         next_event = all_events[0] if all_events else None
 
-        # Hijri date complete (pour le capteur date unique)
-        hijri_date_full = f"{hijri_info['day']} {HIJRI_MONTHS_FR.get(hijri_info['month'], '?')} {hijri_info['year']}"
-        hijri_info["date_full"] = hijri_date_full
+        # Calendrier iCal pour Home Assistant Calendar
+        calendar_ical = _build_icalendar(next_event, all_events, month_starts)
 
         return {
             "prayer_times": prayer_times,
             "iqamah_times": iqamah_times,
             "special": {
                 "imsak": imsak_time,
+                "tahajud": tahajud_time,
             },
+            "forbidden_now": 1 if forbidden_now else 0,
             "forbidden_slots": forbidden_slots,
             "hijri_date": hijri_info,
             "hijri_info": hijri_info,
             "month_starts": month_starts,
             "next_month": next_month,
+            "next_month_start": next_month.get("gregorian", "") if next_month else "",
             "all_events": all_events,
             "next_event": next_event,
+            "event_by_type": event_by_type,
+            "calendar_ical": calendar_ical,
             "tomorrow_prayer_times": await self.hass.async_add_executor_job(
                 _calculate_prayer_times, lat, lon, calc_method, adjustments,
                 today + timedelta(days=1)
@@ -155,7 +171,7 @@ class MuslimCalendarDataUpdateCoordinator(DataUpdateCoordinator):
 
 
 # =============================================================================
-# FONCTIONS DE CALCUL (synchronous, running in executor)
+# FONCTIONS DE CALCUL
 # =============================================================================
 
 def _add_minutes(time_str: str, minutes: int) -> str:
@@ -168,6 +184,66 @@ def _add_minutes(time_str: str, minutes: int) -> str:
         return f"{(total // 60) % 24:02d}:{total % 60:02d}"
     except Exception:
         return time_str
+
+
+def _time_to_minutes(time_str: str) -> int:
+    """Convertit HH:MM en minutes depuis minuit."""
+    if not time_str or time_str == "--:----":
+        return 0
+    try:
+        parts = time_str.split(":")
+        return int(parts[0]) * 60 + int(parts[1])
+    except Exception:
+        return 0
+
+
+def _calculate_tahajud(isha: str, fajr_tomorrow: str) -> str:
+    """Calcule Tahajud = 2/3 entre Isha et Fajr lendemain."""
+    try:
+        isha_min = _time_to_minutes(isha)
+        # Fajr lendemain = minuit + minutes depuis minuit
+        fajr_min = _time_to_minutes(fajr_tomorrow)
+        # Si Fajr < Isha, ajouter 24h
+        if fajr_min <= isha_min:
+            fajr_min += 24 * 60
+        # Nuit = Fajr - Isha en minutes
+        nuit = fajr_min - isha_min
+        # Tahajud = Isha + 2/3 de la nuit
+        tahajud = isha_min + int(nuit * 2 / 3)
+        hour = (tahajud // 60) % 24
+        minute = tahajud % 60
+        return f"{hour:02d}:{minute:02d}"
+    except Exception:
+        return "--:--"
+
+
+def _is_in_forbidden_slot(shuruq: str, maghrib: str, dhuhr: str) -> bool:
+    """Retourne 1 si l'heure actuelle est dans un slot interdit."""
+    now = datetime.now()
+    now_min = now.hour * 60 + now.minute
+
+    # Slot 1: Shuruq a Shuruq + 20
+    s1_start = _time_to_minutes(shuruq)
+    s1_end = s1_start + 20
+
+    # Slot 2: Dhuhr a Dhuhr + 20 (zawwal)
+    s2_start = _time_to_minutes(dhuhr)
+    s2_end = s2_start + 20
+
+    # Slot 3: Maghrib - 20 a Maghrib
+    s3_start = _time_to_minutes(maghrib) - 20
+    s3_end = _time_to_minutes(maghrib)
+
+    # Gerer le cas ou Maghrib < Shuruq dans la journee (passage a minuit)
+    if s3_start < 0:
+        s3_start += 24 * 60
+        s3_end += 24 * 60
+
+    in_slot1 = s1_start <= now_min < s1_end
+    in_slot2 = s2_start <= now_min < s2_end
+    in_slot3 = s3_start <= now_min < s3_end
+
+    return in_slot1 or in_slot2 or in_slot3
 
 
 def _calculate_prayer_times(
@@ -215,7 +291,7 @@ def _get_hijri_info(target_date) -> Dict:
         return {"day": 1, "month": 1, "year": 1445}
 
 
-def _find_events(start_date, count: int = 10) -> list:
+def _find_events(start_date, count: int = 365) -> list:
     events = []
     current = start_date
     for _ in range(400):
@@ -235,6 +311,16 @@ def _find_events(start_date, count: int = 10) -> list:
         except Exception:
             current += timedelta(days=1)
     return events
+
+
+def _build_event_index(events: list) -> dict:
+    """Construit un index par type d'evenement avec la prochaine occurrence."""
+    index = {}
+    for ev in events:
+        ev_key = ev.get("name", "")
+        if ev_key not in index:
+            index[ev_key] = ev
+    return index
 
 
 def _find_month_starts(start_date, count: int = 12) -> list:
@@ -262,3 +348,41 @@ def _find_month_starts(start_date, count: int = 12) -> list:
         except Exception:
             current += timedelta(days=1)
     return starts
+
+
+def _build_icalendar(next_event, all_events, month_starts) -> str:
+    """Genere un calendrier iCal avec les evenements islamiques et debuts de mois."""
+    lines = [
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        "PRODID:-//Muslim Calendar//EN",
+        "CALSCALE:GREGORIAN",
+        "METHOD:PUBLISH",
+        "X-WR-CALNAME:Calendrier Islamique",
+    ]
+
+    # Evenements
+    for ev in all_events[:50]:
+        try:
+            lines.append("BEGIN:VEVENT")
+            lines.append(f"DTSTART;VALUE=DATE:{ev['gregorian'].replace('-', '')}")
+            lines.append(f"SUMMARY:{ev['name']}")
+            lines.append(f"DESCRIPTION:{ev.get('arabic', '')}")
+            lines.append(f"UID:{ev['hijri']}@muslim-calendar")
+            lines.append("END:VEVENT")
+        except Exception:
+            pass
+
+    # Debuts de mois
+    for ms in month_starts[:12]:
+        try:
+            lines.append("BEGIN:VEVENT")
+            lines.append(f"DTSTART;VALUE=DATE:{ms['gregorian'].replace('-', '')}")
+            lines.append(f"SUMMARY:Debut {ms['month_name']}")
+            lines.append(f"UID:month-{ms['hijri']}@muslim-calendar")
+            lines.append("END:VEVENT")
+        except Exception:
+            pass
+
+    lines.append("END:VCALENDAR")
+    return "\r\n".join(lines)
