@@ -77,8 +77,8 @@ class MuslimCalendarDataUpdateCoordinator(DataUpdateCoordinator):
         """Recalcule toutes les donnees."""
         today = date.today()
 
-        lat = self._config.get("lat", 47.4)
-        lon = self._config.get("lon", -0.64)
+        lat = self._config.get("lat", DEFAULT_LOCATION["lat"])
+        lon = self._config.get("lon", DEFAULT_LOCATION["lon"])
         calc_method = self._config.get("method", "isna")
         adjustments = {
             "Fajr": self._config.get("adjust_fajr", 0),
