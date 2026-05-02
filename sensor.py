@@ -1,56 +1,27 @@
 """
-Muslim Calendar - Sensor platform.
-Cree un device Salat avec 1 entite par information.
+Muslim Calendar - Capteurs Home Assistant.
+Un device avec 1 entite par information.
 """
 
 import logging
 from homeassistant.helpers.entity import Entity
 
-from .const import DOMAIN, DEVICE_NAME
-from . import SalatDataUpdateCoordinator
+from .const import DOMAIN, DEVICE_NAME, HIJRI_MONTHS_FR
+from . import MuslimCalendarDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
-# =============================================================================
-# DESCRIPTIONS DES CAPTEURS
-# =============================================================================
-
-PRAYER_SENSORS = [
-    ("prayer_times/fajr", "Fajr", "mdi:weather-sunset-up"),
-    ("prayer_times/sunrise", "Lever du soleil", "mdi:weather-sunset"),
-    ("prayer_times/dhuhr", "Dhuhr", "mdi:weather-sunny"),
-    ("prayer_times/asr", "Asr", "mdi:weather-sunset-down"),
-    ("prayer_times/maghrib", "Maghrib", "mdi:weather-night"),
-    ("prayer_times/isha", "Isha", "mdi:weather-night"),
-    ("prayer_times/midnight", "Minuit", "mdi:weather-night"),
-]
-
-IQAMAH_SENSORS = [
-    ("iqamah_times/fajr", "Iqamah Fajr", "mdi:clock-check-outline"),
-    ("iqamah_times/dhuhr", "Iqamah Dhuhr", "mdi:clock-check-outline"),
-    ("iqamah_times/asr", "Iqamah Asr", "mdi:clock-check-outline"),
-    ("iqamah_times/maghrib", "Iqamah Maghrib", "mdi:clock-check-outline"),
-    ("iqamah_times/isha", "Iqamah Isha", "mdi:clock-check-outline"),
-]
-
-SPECIAL_SENSORS = [
-    ("imsak", "Imsak", "mdi:clock-alert-outline"),
-    ("fajr_end", "Fin Fajr", "mdi:clock-end"),
-    ("forbidden_start", "Debut creneau interdit", "mdi:clock-pause"),
-    ("forbidden_end", "Fin creneau interdit", "mdi:clock-start"),
-]
-
 
 # =============================================================================
-# CAPTEUR SALAT
+# CAPTEUR SALAT DE BASE
 # =============================================================================
 
-class SalatSensor(Entity):
-    """Capteur Salat generique."""
+class MuslimCalendarSensor(Entity):
+    """Capteur generique."""
 
     def __init__(
         self,
-        coordinator: SalatDataUpdateCoordinator,
+        coordinator: MuslimCalendarDataUpdateCoordinator,
         unique_id_suffix: str,
         name: str,
         icon: str,
@@ -64,7 +35,6 @@ class SalatSensor(Entity):
         self._attr_device_info = coordinator._get_device_info()
 
     def _get_nested(self, data, key_path: str):
-        """Accede a une cle nestede comme 'prayer_times/fajr' dans data dict."""
         if not data or not key_path:
             return None
         parts = key_path.split("/")
@@ -88,34 +58,108 @@ class SalatSensor(Entity):
         await self.coordinator.async_request_refresh()
 
 
-class SalatSpecialSensor(SalatSensor):
-    """Capteur special pour imsak, creneau interdit, etc."""
+# =============================================================================
+# CAPTEURS HORAIRES DE PRIERE
+# =============================================================================
 
-    def __init__(self, coordinator, unique_id_suffix: str, name: str, icon: str, key_path: str):
+PRAYER_SENSORS = [
+    ("prayer_times/fajr", "Fajr", "mdi:weather-sunset-up"),
+    ("prayer_times/shuruq", "Shuruq", "mdi:weather-sunset"),
+    ("prayer_times/dhuhr", "Dhuhr", "mdi:weather-sunny"),
+    ("prayer_times/asr", "Asr", "mdi:weather-sunset-down"),
+    ("prayer_times/maghrib", "Maghrib", "mdi:weather-night"),
+    ("prayer_times/isha", "Isha", "mdi:weather-night"),
+    ("prayer_times/midnight", "Minuit", "mdi:weather-night"),
+]
+
+IQAMAH_SENSORS = [
+    ("iqamah_times/fajr", "Iqamah Fajr", "mdi:clock-check-outline"),
+    ("iqamah_times/dhuhr", "Iqamah Dhuhr", "mdi:clock-check-outline"),
+    ("iqamah_times/asr", "Iqamah Asr", "mdi:clock-check-outline"),
+    ("iqamah_times/maghrib", "Iqamah Maghrib", "mdi:clock-check-outline"),
+    ("iqamah_times/isha", "Iqamah Isha", "mdi:clock-check-outline"),
+]
+
+
+# =============================================================================
+# CAPTEUR IMSAK (10 min avant Fajr)
+# =============================================================================
+
+class MuslimCalendarImsakSensor(MuslimCalendarSensor):
+    """Capteur Imsak."""
+
+    def __init__(self, coordinator):
         super().__init__(
             coordinator=coordinator,
-            unique_id_suffix=unique_id_suffix,
-            name=name,
-            icon=icon,
-            key_path=key_path,
+            unique_id_suffix="special_imsak",
+            name="Imsak",
+            icon="mdi:clock-alert-outline",
+            key_path="special/imsak",
         )
 
 
-class SalatDateSensor(SalatSensor):
-    """Capteur date Hijri (jour, mois, annee separes)."""
+# =============================================================================
+# CAPTEUR DATE HIJRI (UN SEUL CAPTEUR AVEC ATTRIBUTS)
+# =============================================================================
 
-    def __init__(self, coordinator, unique_id_suffix: str, name: str, icon: str, key_path: str):
+class MuslimCalendarDateSensor(MuslimCalendarSensor):
+    """Capteur date Hijri.
+
+    state = date complete (ex: "10 Ramadan 1447")
+    attributes:
+        - hijri_day (int)
+        - hijri_month (int)
+        - hijri_month_full (str)
+        - hijri_year (int)
+        - hijri_date_full (str)
+    """
+
+    def __init__(self, coordinator):
         super().__init__(
             coordinator=coordinator,
-            unique_id_suffix=unique_id_suffix,
-            name=name,
-            icon=icon,
-            key_path=key_path,
+            unique_id_suffix="hijri_date",
+            name="Date Hijri",
+            icon="mdi:calendar伊斯兰",
+            key_path="hijri_date/date_full",
         )
 
+    @property
+    def state(self):
+        data = self.coordinator.data
+        if not data:
+            return "Inconnu"
+        hijri = data.get("hijri_info", {})
+        if not hijri:
+            return "Inconnu"
+        month_name = HIJRI_MONTHS_FR.get(hijri.get("month", 0), "?")
+        return f"{hijri.get('day', 0)} {month_name} {hijri.get('year', 0)}"
 
-class SalatMonthsSensor(SalatSensor):
-    """Capteur Mois Hijri - state = prochain mois, attrs = tous les mois."""
+    @property
+    def extra_state_attributes(self):
+        data = self.coordinator.data
+        if not data:
+            return {}
+        hijri = data.get("hijri_info", {})
+        month_name = HIJRI_MONTHS_FR.get(hijri.get("month", 0), "?")
+        return {
+            "hijri_day": hijri.get("day", 0),
+            "hijri_month": hijri.get("month", 0),
+            "hijri_month_full": month_name,
+            "hijri_year": hijri.get("year", 0),
+            "hijri_date_full": f"{hijri.get('day', 0)} {month_name} {hijri.get('year', 0)}",
+        }
+
+
+# =============================================================================
+# CAPTEUR MOIS HIJRI (AVEC ATTRIBUTS)
+# =============================================================================
+
+class MuslimCalendarMonthsSensor(MuslimCalendarSensor):
+    """Capteur Mois Hijri.
+
+    state = prochain mois
+    attributes = {next_*, months: [...]}
+    """
 
     def __init__(self, coordinator):
         super().__init__(
@@ -128,12 +172,9 @@ class SalatMonthsSensor(SalatSensor):
     @property
     def state(self):
         data = self.coordinator.data
-        if not data:
+        if not data or not data.get("next_month"):
             return "Inconnu"
-        next_month = data.get("next_month")
-        if not next_month:
-            return "Inconnu"
-        return next_month.get("month_name", "Inconnu")
+        return data["next_month"].get("month_name", "Inconnu")
 
     @property
     def extra_state_attributes(self):
@@ -153,8 +194,16 @@ class SalatMonthsSensor(SalatSensor):
         }
 
 
-class SalatEventsSensor(SalatSensor):
-    """Capteur Evenements Hijri - state = prochain evenement, attrs = tous les evenements."""
+# =============================================================================
+# CAPTEUR EVENEMENTS (AVEC ATTRIBUTS)
+# =============================================================================
+
+class MuslimCalendarEventsSensor(MuslimCalendarSensor):
+    """Capteur Evenements Islamiques.
+
+    state = prochain evenement
+    attributes = {next_*, events: [...]}
+    """
 
     def __init__(self, coordinator):
         super().__init__(
@@ -167,12 +216,9 @@ class SalatEventsSensor(SalatSensor):
     @property
     def state(self):
         data = self.coordinator.data
-        if not data:
+        if not data or not data.get("next_event"):
             return "Aucun"
-        next_event = data.get("next_event")
-        if not next_event:
-            return "Aucun"
-        return next_event.get("name", "Aucun")
+        return data["next_event"].get("name", "Aucun")
 
     @property
     def extra_state_attributes(self):
@@ -194,6 +240,47 @@ class SalatEventsSensor(SalatSensor):
 
 
 # =============================================================================
+# CAPTEUR CRENEAUX INTERDITS (AVEC ATTRIBUTS)
+# =============================================================================
+
+class MuslimCalendarForbiddenSensor(MuslimCalendarSensor):
+    """Capteur Creneaux Interdits a la priere.
+
+    state = slot1_start
+    attributes:
+        - slot1_start (shuruq)
+        - slot1_end (shuruq + 20 min)
+        - slot2_start (zawwal / Dhuhr)
+        - slot2_end (zawwal + 20 min)
+        - slot3_start (maghrib - 20 min)
+        - slot3_end (maghrib)
+    """
+
+    def __init__(self, coordinator):
+        super().__init__(
+            coordinator=coordinator,
+            unique_id_suffix="forbidden_slots",
+            name="Creneaux interdits",
+            icon="mdi:clock-pause",
+        )
+
+    @property
+    def state(self):
+        data = self.coordinator.data
+        if not data:
+            return "Inconnu"
+        slots = data.get("forbidden_slots", {})
+        return slots.get("slot1_start", "Inconnu")
+
+    @property
+    def extra_state_attributes(self):
+        data = self.coordinator.data
+        if not data:
+            return {}
+        return data.get("forbidden_slots", {})
+
+
+# =============================================================================
 # PLATFORM SETUP
 # =============================================================================
 
@@ -201,31 +288,29 @@ async def async_setup_entry(hass, entry, async_add_entities):
     coordinator = hass.data[DOMAIN][entry.entry_id]
     entities = []
 
-    # Heures de priere
+    # Heures de priere (fajr, shuruq, dhuhr, asr, maghrib, isha, midnight)
     for key_path, name, icon in PRAYER_SENSORS:
         suffix = key_path.replace("/", "_")
-        entities.append(SalatSensor(coordinator, f"prayer_{suffix}", name, icon, key_path))
+        entities.append(MuslimCalendarSensor(coordinator, f"prayer_{suffix}", name, icon, key_path))
 
     # Iqamah
     for key_path, name, icon in IQAMAH_SENSORS:
         suffix = key_path.replace("/", "_")
-        entities.append(SalatSensor(coordinator, f"iqamah_{suffix}", name, icon, key_path))
+        entities.append(MuslimCalendarSensor(coordinator, f"iqamah_{suffix}", name, icon, key_path))
 
-    # Speciaux
-    for key_path, name, icon in SPECIAL_SENSORS:
-        entities.append(SalatSpecialSensor(coordinator, f"special_{key_path}", name, icon, key_path))
+    # Imsak
+    entities.append(MuslimCalendarImsakSensor(coordinator))
 
-    # Dates Hijri
-    for date_type in ["day", "month", "year"]:
-        entities.append(SalatDateSensor(
-            coordinator, f"hijri_{date_type}", f"Jour Hijri".replace("Jour", "Annee" if date_type == "year" else "Mois" if date_type == "month" else "Jour"),
-            "mdi:calendar-today", f"hijri_info/{date_type}"
-        ))
+    # Date Hijri (UN seul capteur avec 5 attributs)
+    entities.append(MuslimCalendarDateSensor(coordinator))
 
     # Mois Hijri avec attributs
-    entities.append(SalatMonthsSensor(coordinator))
+    entities.append(MuslimCalendarMonthsSensor(coordinator))
 
     # Evenements avec attributs
-    entities.append(SalatEventsSensor(coordinator))
+    entities.append(MuslimCalendarEventsSensor(coordinator))
+
+    # Creneaux interdits avec 6 attributs
+    entities.append(MuslimCalendarForbiddenSensor(coordinator))
 
     async_add_entities(entities, update_before_add=True)

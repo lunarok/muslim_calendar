@@ -3,9 +3,19 @@ Muslim Calendar - Constantes partagees.
 """
 
 DOMAIN = "muslim_calendar"
-DEVICE_NAME = "Salat"
+DEVICE_NAME = "Muslim Calendar"
 DEVICE_MANUFACTURER = "Muslim Calendar"
 DEVICE_MODEL = "Islamic Prayer Times"
+
+LOCATIONS = {
+    "makkah": {"name": "La Mecque (Masjid Al-Haram)", "lat": 21.4225, "lon": 39.8262},
+    "madinah": {"name": "Medine (Masjid An-Nabawi)", "lat": 24.5248, "lon": 39.5692},
+    "paris": {"name": "Paris", "lat": 48.8566, "lon": 2.3522},
+    "angers": {"name": "Angers", "lat": 47.4736, "lon": -0.5634},
+    "marseille": {"name": "Marseille", "lat": 43.2965, "lon": 5.3698},
+    "lyon": {"name": "Lyon", "lat": 45.7640, "lon": 4.8357},
+    "custom": {"name": "Personnalisee", "lat": None, "lon": None},
+}
 
 CALC_METHODS = {
     "isna": "Islamic Society of North America",

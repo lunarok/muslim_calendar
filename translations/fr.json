@@ -1,18 +1,13 @@
 {
-  "title": "Muslim Calendar",
   "config": {
     "step": {
       "user": {
         "title": "Muslim Calendar",
-        "description": "Configurez l'integration Salat pour votre localisation.",
-        "data_description": {
-          "lat": "Latitude du lieu",
-          "lon": "Longitude du lieu",
-          "method": "Methode de calcul des heures de priere"
-        },
+        "description": "Configurez l'integration Muslim Calendar pour votre localisation.",
         "data": {
-          "lat": "Latitude",
-          "lon": "Longitude",
+          "location": "Localisation",
+          "lat": "Latitude (si personnalisee)",
+          "lon": "Longitude (si personnalisee)",
           "method": "Methode de calcul",
           "adjust_fajr": "Ajustement Fajr (minutes)",
           "adjust_dhuhr": "Ajustement Dhuhr (minutes)",
@@ -24,15 +19,17 @@
           "iqamah_asr": "Iqamah Asr (minutes)",
           "iqamah_maghrib": "Iqamah Maghrib (minutes)",
           "iqamah_isha": "Iqamah Isha (minutes)"
+        },
+        "data_description": {
+          "location": "Selectionnez une ville predefinie ou personnalisee",
+          "lat": "Necessaire uniquement si localisation personnalisee",
+          "lon": "Necessaire uniquement si localisation personnalisee",
+          "method": "Methode de calcul des heures de priere"
         }
-      },
-      "init": {
-        "title": "Muslim Calendar - Options",
-        "description": "Modifiez les parametres de l'integration."
       }
     },
     "error": {
-      "location_required": "La latitude et la longitude sont requises.",
+      "location_required": "Les coordonnes sont requises pour une localisation personnalisee.",
       "invalid_location": "Latitude ou longitude invalide."
     }
   },
@@ -42,6 +39,7 @@
         "title": "Muslim Calendar - Options",
         "description": "Modifiez les parametres.",
         "data": {
+          "location": "Localisation",
           "lat": "Latitude",
           "lon": "Longitude",
           "method": "Methode de calcul",
@@ -56,28 +54,6 @@
           "iqamah_maghrib": "Iqamah Maghrib",
           "iqamah_isha": "Iqamah Isha"
         }
-      }
-    }
-  },
-  "entity_component": {
-    "sensor": {
-      "state": {
-        "prayer_times/fajr": "Fajr",
-        "prayer_times/sunrise": "Lever du soleil",
-        "prayer_times/dhuhr": "Dhuhr",
-        "prayer_times/asr": "Asr",
-        "prayer_times/maghrib": "Maghrib",
-        "prayer_times/isha": "Isha",
-        "prayer_times/midnight": "Minuit",
-        "imsak": "Imsak",
-        "fajr_end": "Fin Fajr",
-        "forbidden_start": "Debut creneau interdit",
-        "forbidden_end": "Fin creneau interdit",
-        "hijri_day": "Jour Hijri",
-        "hijri_month": "Mois Hijri",
-        "hijri_year": "Annee Hijri",
-        "hijri_months": "Mois Hijri",
-        "hijri_events": "Evenements Islamiques"
       }
     }
   }

@@ -4,7 +4,7 @@ Muslim Calendar - Integration Home Assistant pour les heures de priere islamique
 
 import logging
 from datetime import date, timedelta
-from typing import Dict, Optional
+from typing import Dict
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -17,7 +17,6 @@ from .const import (
     DEVICE_NAME,
     DEVICE_MANUFACTURER,
     DEVICE_MODEL,
-    CALC_METHODS,
     HIJRI_MONTHS_FR,
     ISLAMIC_EVENTS,
 )
@@ -27,7 +26,7 @@ _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Configure l'integration via l'UI Home Assistant."""
-    coordinator = SalatDataUpdateCoordinator(hass, entry)
+    coordinator = MuslimCalendarDataUpdateCoordinator(hass, entry)
     await coordinator.async_config_entry_first_refresh()
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
@@ -39,7 +38,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Supprime l'integration."""
-    if unload_ok := await hass.config_entries.async_unload_platforms(entry, ["sensor"])):
+    if unload_ok := await hass.config_entries.async_unload_platforms(entry, ["sensor"]):
         hass.data[DOMAIN].pop(entry.entry_id)
     return unload_ok
 
@@ -48,8 +47,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 # COORDINATOR
 # =============================================================================
 
-class SalatDataUpdateCoordinator(DataUpdateCoordinator):
-    """Coordonne les donnes Salat (mise a jour toutes les heures)."""
+class MuslimCalendarDataUpdateCoordinator(DataUpdateCoordinator):
+    """Coordonne les donnees Muslim Calendar (mise a jour toutes les heures)."""
 
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry):
         self.entry = entry
@@ -67,7 +66,7 @@ class SalatDataUpdateCoordinator(DataUpdateCoordinator):
 
     def _get_device_info(self) -> DeviceInfo:
         return DeviceInfo(
-            identifiers={(DOMAIN, f"{DOMAIN}_{self._config.get('lat', 0)}_{self._config.get('lon', 0)}")},
+            identifiers={(DOMAIN, f"{DOMAIN}_{self._config.get('location', 'custom')}")},
             name=DEVICE_NAME,
             manufacturer=DEVICE_MANUFACTURER,
             model=DEVICE_MODEL,
@@ -75,7 +74,7 @@ class SalatDataUpdateCoordinator(DataUpdateCoordinator):
         )
 
     async def _async_update_data(self):
-        """Recalcule toutes les donnees Salat."""
+        """Recalcule toutes les donnees."""
         today = date.today()
 
         lat = self._config.get("lat", 47.4)
@@ -104,6 +103,22 @@ class SalatDataUpdateCoordinator(DataUpdateCoordinator):
         # Iqamah
         iqamah_times = _calculate_iqamah(prayer_times, iqamah_offsets)
 
+        # Imsak (10 minutes avant Fajr)
+        imsak_time = _add_minutes(prayer_times.get("fajr", "--:--"), -10)
+
+        # Creneaux interdits (3 slots)
+        shuruq = prayer_times.get("shuruq", "--:--")
+        maghrib = prayer_times.get("maghrib", "--:--")
+        dhuhr = prayer_times.get("dhuhr", "--:--")
+        forbidden_slots = {
+            "slot1_start": shuruq,
+            "slot1_end": _add_minutes(shuruq, 20),  # Shuruq + 20 min
+            "slot2_start": dhuhr,
+            "slot2_end": _add_minutes(dhuhr, 20),  # Zawwal Dhuhr + 20 min
+            "slot3_start": _add_minutes(maghrib, -20),  # Maghrib - 20 min
+            "slot3_end": maghrib,
+        }
+
         # Dates Hijri
         hijri_info = _get_hijri_info(today)
 
@@ -115,9 +130,18 @@ class SalatDataUpdateCoordinator(DataUpdateCoordinator):
         all_events = _find_events(today, 10)
         next_event = all_events[0] if all_events else None
 
+        # Hijri date complete (pour le capteur date unique)
+        hijri_date_full = f"{hijri_info['day']} {HIJRI_MONTHS_FR.get(hijri_info['month'], '?')} {hijri_info['year']}"
+        hijri_info["date_full"] = hijri_date_full
+
         return {
             "prayer_times": prayer_times,
             "iqamah_times": iqamah_times,
+            "special": {
+                "imsak": imsak_time,
+            },
+            "forbidden_slots": forbidden_slots,
+            "hijri_date": hijri_info,
             "hijri_info": hijri_info,
             "month_starts": month_starts,
             "next_month": next_month,
@@ -182,7 +206,7 @@ def _calculate_iqamah(prayer_times: Dict, offsets: Dict) -> Dict[str, str]:
     return result
 
 
-def _get_hijri_info(target_date) -> Dict[str, int]:
+def _get_hijri_info(target_date) -> Dict:
     try:
         import hijri_converter
         h = hijri_converter.Gregorian(target_date.year, target_date.month, target_date.day).to_hijri()
