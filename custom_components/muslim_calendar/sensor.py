@@ -125,7 +125,7 @@ class MuslimCalendarDateSensor(MuslimCalendarSensor):
             coordinator=coordinator,
             unique_id_suffix="hijri_date",
             name="Date Hijri",
-            icon="mdi:calendar islam",
+            icon="mdi:calendar",
             key_path="hijri_date/date_full",
         )
 
@@ -262,7 +262,7 @@ class MuslimCalendarForbiddenSensor(MuslimCalendarSensor):
             coordinator=coordinator,
             unique_id_suffix="forbidden_slots",
             name="Creneaux Interdits",
-            icon="mdi:clock-pause",
+            icon="mdi:cancel",
         )
 
     @property
@@ -292,7 +292,7 @@ class MuslimCalendarCalendarSensor(MuslimCalendarSensor):
             coordinator=coordinator,
             unique_id_suffix="calendar",
             name="Calendrier Islamique",
-            icon="mdi:calendar islam",
+            icon="mdi:calendar",
         )
 
     @property
