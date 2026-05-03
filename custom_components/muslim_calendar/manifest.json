@@ -1,11 +1,7 @@
 {
   "name": "Muslim Calendar",
   "version": "1.2.0",
-  "codeowners": ["@lunarok"],
-  "documentation": "https://github.com/lunarok/muslim_calendar",
-  "issue_tracker": "https://github.com/lunarok/muslim_calendar/issues",
   "requirements": ["hijri-converter>=3.0.0", "prayer-times-calculator>=1.0.0"],
   "domain": "muslim_calendar",
-  "config_flow": true,
-  "iot_class": "local_polling"
+  "config_flow": true
 }
