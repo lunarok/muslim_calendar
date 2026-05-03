@@ -19,7 +19,6 @@ async def get_location_options(hass) -> dict:
     """Recupere les localisations disponibles dans Home Assistant."""
     options = {}
 
-    # 1. Zone Home
     try:
         home_state = hass.states.get("zone.home")
         if home_state:
@@ -30,21 +29,16 @@ async def get_location_options(hass) -> dict:
     except Exception as e:
         _LOGGER.warning(f"Could not get zone.home: {e}")
 
-    # 2. Device trackers depuis les apps mobiles
     try:
         entity_registry = er.async_get(hass)
         for entity_id, entry in entity_registry.entities.items():
-            # Accepter device_tracker ou mobile_app
             if entry.domain not in ("device_tracker", "zone"):
                 continue
             state = hass.states.get(entity_id)
             if not state or not state.attributes:
                 continue
-            # Verifier source_type mobile_app
-            source_type = state.attributes.get("source_type", "")
-            # source_type peut etre un enum ou une string
-            source_str = str(source_type).lower() if source_type else ""
-            if "mobile_app" not in source_str:
+            source_type = str(state.attributes.get("source_type", "")).lower()
+            if "mobile_app" not in source_type:
                 continue
             lat = state.attributes.get("latitude")
             lon = state.attributes.get("longitude")
@@ -149,10 +143,21 @@ class MuslimCalendarOptionsFlow(OptionsFlow):
     async def async_step_init(self, user_input=None):
         errors = {}
         config = self.config_entry.data
+        current_loc = config.get("location", "custom")
 
         if user_input is not None:
-            location = user_input.get("location", config.get("location", "custom"))
             method = user_input.get("method", config.get("method", "isna"))
+            location = user_input.get("location", current_loc)
+            iqamah_fajr = int(user_input.get("iqamah_fajr", 20))
+            iqamah_dhuhr = int(user_input.get("iqamah_dhuhr", 15))
+            iqamah_asr = int(user_input.get("iqamah_asr", 15))
+            iqamah_maghrib = int(user_input.get("iqamah_maghrib", 10))
+            iqamah_isha = int(user_input.get("iqamah_isha", 15))
+            adjust_fajr = int(user_input.get("adjust_fajr", 0))
+            adjust_dhuhr = int(user_input.get("adjust_dhuhr", 0))
+            adjust_asr = int(user_input.get("adjust_asr", 0))
+            adjust_maghrib = int(user_input.get("adjust_maghrib", 0))
+            adjust_isha = int(user_input.get("adjust_isha", 0))
 
             if location == "custom":
                 try:
@@ -176,39 +181,41 @@ class MuslimCalendarOptionsFlow(OptionsFlow):
                 "lat": lat,
                 "lon": lon,
                 "method": method,
-                "adjust_fajr": int(user_input.get("adjust_fajr", config.get("adjust_fajr", 0))),
-                "adjust_dhuhr": int(user_input.get("adjust_dhuhr", config.get("adjust_dhuhr", 0))),
-                "adjust_asr": int(user_input.get("adjust_asr", config.get("adjust_asr", 0))),
-                "adjust_maghrib": int(user_input.get("adjust_maghrib", config.get("adjust_maghrib", 0))),
-                "adjust_isha": int(user_input.get("adjust_isha", config.get("adjust_isha", 0))),
-                "iqamah_fajr": int(user_input.get("iqamah_fajr", config.get("iqamah_fajr", 20))),
-                "iqamah_dhuhr": int(user_input.get("iqamah_dhuhr", config.get("iqamah_dhuhr", 15))),
-                "iqamah_asr": int(user_input.get("iqamah_asr", config.get("iqamah_asr", 15))),
-                "iqamah_maghrib": int(user_input.get("iqamah_maghrib", config.get("iqamah_maghrib", 10))),
-                "iqamah_isha": int(user_input.get("iqamah_isha", config.get("iqamah_isha", 15))),
+                "adjust_fajr": adjust_fajr,
+                "adjust_dhuhr": adjust_dhuhr,
+                "adjust_asr": adjust_asr,
+                "adjust_maghrib": adjust_maghrib,
+                "adjust_isha": adjust_isha,
+                "iqamah_fajr": iqamah_fajr,
+                "iqamah_dhuhr": iqamah_dhuhr,
+                "iqamah_asr": iqamah_asr,
+                "iqamah_maghrib": iqamah_maghrib,
+                "iqamah_isha": iqamah_isha,
             }
             return self.async_create_entry(title="", data=data)
 
-        # Preparer le schema - charger les localisations disponibles
         locations = await get_location_options(self.hass)
         loc_choices = {k: v["name"] for k, v in locations.items()}
-        current = config
+
+        # Ensure current location is in choices (fallback to custom if not)
+        if current_loc not in loc_choices:
+            loc_choices["custom"] = "Personnalisee (coordonnees)"
 
         schema = vol.Schema({
-            vol.Required("location", default=current.get("location", "custom")): vol.In(loc_choices),
-            vol.Required("method", default=current.get("method", "isna")): vol.In(list(CALC_METHODS.keys())),
-            vol.Optional("lat", default=str(current.get("lat", DEFAULT_LAT))): str,
-            vol.Optional("lon", default=str(current.get("lon", DEFAULT_LON))): str,
-            vol.Optional("adjust_fajr", default=current.get("adjust_fajr", 0)): int,
-            vol.Optional("adjust_dhuhr", default=current.get("adjust_dhuhr", 0)): int,
-            vol.Optional("adjust_asr", default=current.get("adjust_asr", 0)): int,
-            vol.Optional("adjust_maghrib", default=current.get("adjust_maghrib", 0)): int,
-            vol.Optional("adjust_isha", default=current.get("adjust_isha", 0)): int,
-            vol.Optional("iqamah_fajr", default=current.get("iqamah_fajr", 20)): int,
-            vol.Optional("iqamah_dhuhr", default=current.get("iqamah_dhuhr", 15)): int,
-            vol.Optional("iqamah_asr", default=current.get("iqamah_asr", 15)): int,
-            vol.Optional("iqamah_maghrib", default=current.get("iqamah_maghrib", 10)): int,
-            vol.Optional("iqamah_isha", default=current.get("iqamah_isha", 15)): int,
+            vol.Required("location", default=current_loc): vol.In(loc_choices),
+            vol.Required("method", default=config.get("method", "isna")): vol.In(list(CALC_METHODS.keys())),
+            vol.Optional("lat", default=str(config.get("lat", DEFAULT_LAT))): str,
+            vol.Optional("lon", default=str(config.get("lon", DEFAULT_LON))): str,
+            vol.Optional("adjust_fajr", default=config.get("adjust_fajr", 0)): int,
+            vol.Optional("adjust_dhuhr", default=config.get("adjust_dhuhr", 0)): int,
+            vol.Optional("adjust_asr", default=config.get("adjust_asr", 0)): int,
+            vol.Optional("adjust_maghrib", default=config.get("adjust_maghrib", 0)): int,
+            vol.Optional("adjust_isha", default=config.get("adjust_isha", 0)): int,
+            vol.Optional("iqamah_fajr", default=config.get("iqamah_fajr", 20)): int,
+            vol.Optional("iqamah_dhuhr", default=config.get("iqamah_dhuhr", 15)): int,
+            vol.Optional("iqamah_asr", default=config.get("iqamah_asr", 15)): int,
+            vol.Optional("iqamah_maghrib", default=config.get("iqamah_maghrib", 10)): int,
+            vol.Optional("iqamah_isha", default=config.get("iqamah_isha", 15)): int,
         })
 
         return self.async_show_form(step_id="init", data_schema=schema, errors=errors)
