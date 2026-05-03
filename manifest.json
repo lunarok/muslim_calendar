@@ -1,6 +1,6 @@
 {
   "name": "Muslim Calendar",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "codeowners": ["@lunarok"],
   "documentation": "https://github.com/lunarok/muslim_calendar",
   "issue_tracker": "https://github.com/lunarok/muslim_calendar/issues",
@@ -10,8 +10,5 @@
   "domain_errors": [],
   "config_flow": true,
   "iot_class": "local_polling",
-  "volumes": {
-    "config_flow": true
-  },
   "supported Brands": []
 }
