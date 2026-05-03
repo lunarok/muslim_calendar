@@ -26,11 +26,11 @@ PRAYER_SENSORS = [
 ]
 
 IQAMAH_SENSORS = [
-    ("iqamah_times/fajr", "Iqamah Fajr", "mdi:clock-check-outline"),
-    ("iqamah_times/dhuhr", "Iqamah Dhuhr", "mdi:clock-check-outline"),
-    ("iqamah_times/asr", "Iqamah Asr", "mdi:clock-check-outline"),
-    ("iqamah_times/maghrib", "Iqamah Maghrib", "mdi:clock-check-outline"),
-    ("iqamah_times/isha", "Iqamah Isha", "mdi:clock-check-outline"),
+    ("iqamah_times", "Iqamah Fajr", "mdi:clock-check-outline"),
+    ("iqamah_times", "Iqamah Dhuhr", "mdi:clock-check-outline"),
+    ("iqamah_times", "Iqamah Asr", "mdi:clock-check-outline"),
+    ("iqamah_times", "Iqamah Maghrib", "mdi:clock-check-outline"),
+    ("iqamah_times", "Iqamah Isha", "mdi:clock-check-outline"),
 ]
 
 
@@ -285,10 +285,21 @@ async def async_setup_entry(hass, entry, async_add_entities):
         suffix = key_path.replace("/", "_")
         entities.append(MuslimCalendarSensor(coordinator, f"prayer_{idx}_{suffix}", name, icon, key_path))
 
-    # Iqamah
-    for idx, (key_path, name, icon) in enumerate(IQAMAH_SENSORS):
-        suffix = key_path.replace("/", "_")
-        entities.append(MuslimCalendarSensor(coordinator, f"iqamah_{idx}_{suffix}", name, icon, key_path))
+    # Iqamah (5 separate entities, all under iqamah_times key path)
+    for idx, (name, suffix) in enumerate([
+        ("Iqamah Fajr", "fajr"),
+        ("Iqamah Dhuhr", "dhuhr"),
+        ("Iqamah Asr", "asr"),
+        ("Iqamah Maghrib", "maghrib"),
+        ("Iqamah Isha", "isha"),
+    ]):
+        entities.append(MuslimCalendarSensor(
+            coordinator,
+            f"iqamah_{idx}_{suffix}",
+            name,
+            "mdi:clock-check-outline",
+            f"iqamah_times/iqamah_{suffix}",
+        ))
 
     # Imsak
     entities.append(MuslimCalendarImsakSensor(coordinator))
