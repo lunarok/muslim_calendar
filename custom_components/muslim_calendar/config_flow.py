@@ -19,6 +19,7 @@ async def get_location_options(hass) -> dict:
     """Recupere les localisations disponibles dans Home Assistant."""
     options = {}
 
+    # 1. Zone Home
     try:
         home_state = hass.states.get("zone.home")
         if home_state:
@@ -29,19 +30,28 @@ async def get_location_options(hass) -> dict:
     except Exception as e:
         _LOGGER.warning(f"Could not get zone.home: {e}")
 
+    # 2. Device trackers depuis les apps mobiles
     try:
         entity_registry = er.async_get(hass)
         for entity_id, entry in entity_registry.entities.items():
-            if entry.domain == "device_tracker":
-                state = hass.states.get(entity_id)
-                if state and state.attributes:
-                    source_type = str(state.attributes.get("source_type", ""))
-                    if "mobile_app" in source_type:
-                        lat = state.attributes.get("latitude")
-                        lon = state.attributes.get("longitude")
-                        if lat is not None and lon is not None:
-                            device_name = state.name or entity_id.split(".")[-1]
-                            options[entity_id] = {"name": device_name, "lat": lat, "lon": lon}
+            # Accepter device_tracker ou mobile_app
+            if entry.domain not in ("device_tracker", "zone"):
+                continue
+            state = hass.states.get(entity_id)
+            if not state or not state.attributes:
+                continue
+            # Verifier source_type mobile_app
+            source_type = state.attributes.get("source_type", "")
+            # source_type peut etre un enum ou une string
+            source_str = str(source_type).lower() if source_type else ""
+            if "mobile_app" not in source_str:
+                continue
+            lat = state.attributes.get("latitude")
+            lon = state.attributes.get("longitude")
+            if lat is None or lon is None:
+                continue
+            device_name = state.name or entity_id.split(".")[-1]
+            options[entity_id] = {"name": device_name, "lat": lat, "lon": lon}
     except Exception as e:
         _LOGGER.warning(f"Could not get device trackers: {e}")
 
@@ -139,7 +149,6 @@ class MuslimCalendarOptionsFlow(OptionsFlow):
     async def async_step_init(self, user_input=None):
         errors = {}
         config = self.config_entry.data
-        locations = await get_location_options(self.hass)
 
         if user_input is not None:
             location = user_input.get("location", config.get("location", "custom"))
@@ -153,6 +162,7 @@ class MuslimCalendarOptionsFlow(OptionsFlow):
                     lat = config.get("lat", DEFAULT_LAT)
                     lon = config.get("lon", DEFAULT_LON)
             else:
+                locations = await get_location_options(self.hass)
                 loc = locations.get(location)
                 if loc:
                     lat = loc["lat"]
@@ -179,6 +189,8 @@ class MuslimCalendarOptionsFlow(OptionsFlow):
             }
             return self.async_create_entry(title="", data=data)
 
+        # Preparer le schema - charger les localisations disponibles
+        locations = await get_location_options(self.hass)
         loc_choices = {k: v["name"] for k, v in locations.items()}
         current = config
 
