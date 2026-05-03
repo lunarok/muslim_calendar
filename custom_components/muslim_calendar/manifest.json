@@ -1,7 +1,7 @@
 {
   "name": "Muslim Calendar",
   "version": "1.2.4",
-  "requirements": ["hijri-converter>=3.0.0", "prayer-times-calculator>=1.0.0"],
+  "requirements": ["hijridate>=2.3.0", "prayer-times-calculator>=0.0.12"],
   "domain": "muslim_calendar",
   "config_flow": true,
   "iot_class": "local_polling"

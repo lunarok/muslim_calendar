@@ -296,8 +296,8 @@ def _calculate_iqamah(prayer_times: Dict, offsets: Dict) -> Dict[str, str]:
 
 def _get_hijri_info(target_date) -> Dict:
     try:
-        import hijri_converter
-        h = hijri_converter.Gregorian(target_date.year, target_date.month, target_date.day).to_hijri()
+        import hijridate
+        h = hijridate.Gregorian(target_date.year, target_date.month, target_date.day).to_hijri()
         return {"day": h.day, "month": h.month, "year": h.year}
     except Exception:
         return {"day": 1, "month": 1, "year": 1445}
@@ -310,8 +310,8 @@ def _find_events(start_date, count: int = 365) -> list:
         if len(events) >= count:
             break
         try:
-            import hijri_converter
-            h = hijri_converter.Gregorian(current.year, current.month, current.day).to_hijri()
+            import hijridate
+            h = hijridate.Gregorian(current.year, current.month, current.day).to_hijri()
             key = (h.month, h.day)
             if key in ISLAMIC_EVENTS:
                 ev = dict(ISLAMIC_EVENTS[key])
@@ -344,8 +344,8 @@ def _find_month_starts(start_date, count: int = 12) -> list:
         if found >= count:
             break
         try:
-            import hijri_converter
-            h = hijri_converter.Gregorian(current.year, current.month, current.day).to_hijri()
+            import hijridate
+            h = hijridate.Gregorian(current.year, current.month, current.day).to_hijri()
             if prev_month is not None and h.month != prev_month:
                 starts.append({
                     "date": current.isoformat(),
