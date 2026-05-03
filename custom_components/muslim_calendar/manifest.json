@@ -1,6 +1,6 @@
 {
   "name": "Muslim Calendar",
-  "version": "1.2.4",
+  "version": "1.3.0",
   "requirements": ["hijridate>=2.3.0", "prayer-times-calculator>=0.0.12"],
   "domain": "muslim_calendar",
   "config_flow": true,

@@ -1,23 +1,45 @@
 """
-Muslim Calendar - Capteurs Home Assistant.
-Un device avec 1 entite par information.
+Muslim Calendar - Sensors for Home Assistant.
+One device with entities for prayer times, hijri date, events, and forbidden slots.
 """
 
 import logging
 from homeassistant.helpers.entity import Entity
 
-from .const import DOMAIN, DEVICE_NAME, HIJRI_MONTHS_FR
+from .const import DOMAIN, HIJRI_MONTHS_EN, HIJRI_MONTH_KEYS
 from . import MuslimCalendarDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
 
 # =============================================================================
-# CAPTEUR SALAT DE BASE
+# PRAYER TIMES (without Midnight)
+# =============================================================================
+
+PRAYER_SENSORS = [
+    ("prayer_times/fajr", "Fajr", "mdi:weather-sunset-up"),
+    ("prayer_times/shuruq", "Shuruq", "mdi:weather-sunset"),
+    ("prayer_times/dhuhr", "Dhuhr", "mdi:weather-sunny"),
+    ("prayer_times/asr", "Asr", "mdi:weather-sunset-down"),
+    ("prayer_times/maghrib", "Maghrib", "mdi:weather-night"),
+    ("prayer_times/isha", "Isha", "mdi:weather-night"),
+]
+
+IQAMAH_SENSORS = [
+    ("iqamah_times/fajr", "Iqamah Fajr", "mdi:clock-check-outline"),
+    ("iqamah_times/dhuhr", "Iqamah Dhuhr", "mdi:clock-check-outline"),
+    ("iqamah_times/asr", "Iqamah Asr", "mdi:clock-check-outline"),
+    ("iqamah_times/maghrib", "Iqamah Maghrib", "mdi:clock-check-outline"),
+    ("iqamah_times/isha", "Iqamah Isha", "mdi:clock-check-outline"),
+]
+
+
+# =============================================================================
+# BASE SENSOR CLASS
 # =============================================================================
 
 class MuslimCalendarSensor(Entity):
-    """Capteur generique."""
+    """Base sensor class."""
 
     def __init__(
         self,
@@ -52,40 +74,19 @@ class MuslimCalendarSensor(Entity):
         if not data:
             return None
         value = self._get_nested(data, self._key_path)
-        return value if value is not None else "Inconnu"
+        return value if value is not None else "Unknown"
 
     async def async_update(self):
         await self.coordinator.async_request_refresh()
 
 
 # =============================================================================
-# CAPTEURS HORAIRES DE PRIERE
-# =============================================================================
-
-PRAYER_SENSORS = [
-    ("prayer_times/fajr", "Fajr", "mdi:weather-sunset-up"),
-    ("prayer_times/shuruq", "Shuruq", "mdi:weather-sunset"),
-    ("prayer_times/dhuhr", "Dhuhr", "mdi:weather-sunny"),
-    ("prayer_times/asr", "Asr", "mdi:weather-sunset-down"),
-    ("prayer_times/maghrib", "Maghrib", "mdi:weather-night"),
-    ("prayer_times/isha", "Isha", "mdi:weather-night"),
-    ("prayer_times/midnight", "Minuit", "mdi:weather-night"),
-]
-
-IQAMAH_SENSORS = [
-    ("iqamah_times/fajr", "Iqamah Fajr", "mdi:clock-check-outline"),
-    ("iqamah_times/dhuhr", "Iqamah Dhuhr", "mdi:clock-check-outline"),
-    ("iqamah_times/asr", "Iqamah Asr", "mdi:clock-check-outline"),
-    ("iqamah_times/maghrib", "Iqamah Maghrib", "mdi:clock-check-outline"),
-    ("iqamah_times/isha", "Iqamah Isha", "mdi:clock-check-outline"),
-]
-
-
-# =============================================================================
-# CAPTEUR IMSAK
+# IMSAK SENSOR
 # =============================================================================
 
 class MuslimCalendarImsakSensor(MuslimCalendarSensor):
+    """Imsak time (10 minutes before Fajr)."""
+
     def __init__(self, coordinator):
         super().__init__(
             coordinator=coordinator,
@@ -97,34 +98,34 @@ class MuslimCalendarImsakSensor(MuslimCalendarSensor):
 
 
 # =============================================================================
-# CAPTEUR TAHALLUL (Dernier tiers de la nuit)
+# TAHADJUD SENSOR
 # =============================================================================
 
 class MuslimCalendarTahajudSensor(MuslimCalendarSensor):
-    """Capteur Tahajud (dernier tiers de la nuit = 2/3 entre Isha et Fajr)."""
+    """Tahajjud time (last third of night)."""
 
     def __init__(self, coordinator):
         super().__init__(
             coordinator=coordinator,
             unique_id_suffix="special_tahajud",
-            name="Tahajud",
+            name="Tahajjud",
             icon="mdi:weather-night",
             key_path="special/tahajud",
         )
 
 
 # =============================================================================
-# CAPTEUR DATE HIJRI (UN SEUL CAPTEUR, 5 ATTRIBUTS)
+# HIJRI DATE SENSOR
 # =============================================================================
 
 class MuslimCalendarDateSensor(MuslimCalendarSensor):
-    """State = date complete. Attributes: hijri_day, hijri_month, hijri_month_full, hijri_year, hijri_date_full."""
+    """Hijri date sensor with 5 attributes."""
 
     def __init__(self, coordinator):
         super().__init__(
             coordinator=coordinator,
             unique_id_suffix="hijri_date",
-            name="Date Hijri",
+            name="Hijri Date",
             icon="mdi:calendar",
             key_path="hijri_date/date_full",
         )
@@ -133,11 +134,11 @@ class MuslimCalendarDateSensor(MuslimCalendarSensor):
     def state(self):
         data = self.coordinator.data
         if not data:
-            return "Inconnu"
+            return "Unknown"
         hijri = data.get("hijri_info", {})
         if not hijri:
-            return "Inconnu"
-        month_name = HIJRI_MONTHS_FR.get(hijri.get("month", 0), "?")
+            return "Unknown"
+        month_name = HIJRI_MONTHS_EN.get(hijri.get("month", 0), "?")
         return f"{hijri.get('day', 0)} {month_name} {hijri.get('year', 0)}"
 
     @property
@@ -146,7 +147,7 @@ class MuslimCalendarDateSensor(MuslimCalendarSensor):
         if not data:
             return {}
         hijri = data.get("hijri_info", {})
-        month_name = HIJRI_MONTHS_FR.get(hijri.get("month", 0), "?")
+        month_name = HIJRI_MONTHS_EN.get(hijri.get("month", 0), "?")
         return {
             "hijri_day": hijri.get("day", 0),
             "hijri_month": hijri.get("month", 0),
@@ -157,17 +158,17 @@ class MuslimCalendarDateSensor(MuslimCalendarSensor):
 
 
 # =============================================================================
-# CAPTEUR MOIS PROCHAIN (state = date du debut du prochain mois)
+# NEXT MONTHS SENSOR
 # =============================================================================
 
-class MuslimCalendarNextMonthSensor(MuslimCalendarSensor):
-    """State = date gregorienne du prochain debut de mois Hijri."""
+class MuslimCalendarNextMonthsSensor(MuslimCalendarSensor):
+    """Next Hijri months with start dates."""
 
     def __init__(self, coordinator):
         super().__init__(
             coordinator=coordinator,
-            unique_id_suffix="next_month_start",
-            name="Mois Prochain",
+            unique_id_suffix="next_months",
+            name="Next Months",
             icon="mdi:calendar-month",
         )
 
@@ -175,11 +176,11 @@ class MuslimCalendarNextMonthSensor(MuslimCalendarSensor):
     def state(self):
         data = self.coordinator.data
         if not data:
-            return "Inconnu"
+            return "Unknown"
         ms = data.get("next_month")
         if not ms:
-            return "Inconnu"
-        return ms.get("gregorian", "Inconnu")
+            return "Unknown"
+        return ms.get("month_name", "Unknown")
 
     @property
     def extra_state_attributes(self):
@@ -188,28 +189,29 @@ class MuslimCalendarNextMonthSensor(MuslimCalendarSensor):
             return {}
         ms = data.get("next_month", {})
         months = data.get("month_starts", [])
-        return {
+        attrs = {
             "next_month_name": ms.get("month_name", ""),
-            "next_month_hijri": ms.get("hijri", ""),
-            "months": [
-                {"name": m.get("month_name", ""), "date": m.get("gregorian", ""), "hijri": m.get("hijri", ""), "month": m.get("month", 0)}
-                for m in months
-            ],
         }
+        # Add month_muharram, month_safar, etc.
+        for m in months:
+            month_num = m.get("month", 0)
+            key = HIJRI_MONTH_KEYS.get(month_num, f"month_{month_num}")
+            attrs[f"month_{key}"] = m.get("gregorian", "")
+        return attrs
 
 
 # =============================================================================
-# CAPTEUR EVENEMENTS ISLAMIQUES (attributs par type d'evenement)
+# EVENTS SENSOR
 # =============================================================================
 
 class MuslimCalendarEventsSensor(MuslimCalendarSensor):
-    """State = prochain evenement. Attributes: next_* + event_ par type d'evenement."""
+    """Islamic events sensor with per-type attributes."""
 
     def __init__(self, coordinator):
         super().__init__(
             coordinator=coordinator,
-            unique_id_suffix="hijri_events",
-            name="Evenements Islamiques",
+            unique_id_suffix="events",
+            name="Events",
             icon="mdi:star",
         )
 
@@ -217,8 +219,8 @@ class MuslimCalendarEventsSensor(MuslimCalendarSensor):
     def state(self):
         data = self.coordinator.data
         if not data or not data.get("next_event"):
-            return "Aucun"
-        return data["next_event"].get("name", "Aucun")
+            return "None"
+        return data["next_event"].get("name", "None")
 
     @property
     def extra_state_attributes(self):
@@ -227,41 +229,31 @@ class MuslimCalendarEventsSensor(MuslimCalendarSensor):
             return {}
         ev_by_type = data.get("event_by_type", {})
         next_ev = data.get("next_event", {})
-        events = data.get("all_events", [])
-
         attrs = {
             "next_event_name": next_ev.get("name", ""),
             "next_event_date": next_ev.get("gregorian", ""),
             "next_event_hijri": next_ev.get("hijri", ""),
             "next_event_arabic": next_ev.get("arabic", ""),
         }
-
-        # Un attribut par type d'evenement (prochaine occurrence)
+        # One attribute per event type
         for ev_name, ev_data in ev_by_type.items():
             key = ev_name.lower().replace(" ", "_").replace("'", "")
             attrs[f"event_{key}"] = ev_data.get("gregorian", "")
-
-        # Liste complete des 10 evenements
-        attrs["events"] = [
-            {"name": e.get("name", ""), "date": e.get("gregorian", ""), "hijri": e.get("hijri", ""), "arabic": e.get("arabic", "")}
-            for e in events[:10]
-        ]
-
         return attrs
 
 
 # =============================================================================
-# CAPTEUR CRENEAUX INTERDITS (state binaire 0/1 + 6 attributs)
+# MAKRUH IBADAH SENSOR (Forbidden slots)
 # =============================================================================
 
 class MuslimCalendarForbiddenSensor(MuslimCalendarSensor):
-    """State = 1 si dans un slot interdit, 0 sinon. Attributes: 6 slots."""
+    """Forbidden prayer slots (makruh times). State = 1 if currently in a forbidden slot."""
 
     def __init__(self, coordinator):
         super().__init__(
             coordinator=coordinator,
-            unique_id_suffix="forbidden_slots",
-            name="Creneaux Interdits",
+            unique_id_suffix="makruh_ibadah",
+            name="Makruh Ibadah",
             icon="mdi:cancel",
         )
 
@@ -281,39 +273,6 @@ class MuslimCalendarForbiddenSensor(MuslimCalendarSensor):
 
 
 # =============================================================================
-# CAPTEUR CALENDRIER (iCal)
-# =============================================================================
-
-class MuslimCalendarCalendarSensor(MuslimCalendarSensor):
-    """Capteur calendrier pour Home Assistant Calendar entity."""
-
-    def __init__(self, coordinator):
-        super().__init__(
-            coordinator=coordinator,
-            unique_id_suffix="calendar",
-            name="Calendrier Islamique",
-            icon="mdi:calendar",
-        )
-
-    @property
-    def state(self):
-        data = self.coordinator.data
-        if not data:
-            return "aucun"
-        events = data.get("all_events", [])
-        return f"{len(events)} evenements"
-
-    @property
-    def extra_state_attributes(self):
-        data = self.coordinator.data
-        if not data:
-            return {}
-        return {
-            "events": data.get("calendar_ical", ""),
-        }
-
-
-# =============================================================================
 # PLATFORM SETUP
 # =============================================================================
 
@@ -321,7 +280,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
     coordinator = hass.data[DOMAIN][entry.entry_id]
     entities = []
 
-    # Heures de priere
+    # Prayer times (6, no Midnight)
     for idx, (key_path, name, icon) in enumerate(PRAYER_SENSORS):
         suffix = key_path.replace("/", "_")
         entities.append(MuslimCalendarSensor(coordinator, f"prayer_{idx}_{suffix}", name, icon, key_path))
@@ -334,22 +293,19 @@ async def async_setup_entry(hass, entry, async_add_entities):
     # Imsak
     entities.append(MuslimCalendarImsakSensor(coordinator))
 
-    # Tahajud
-    entities.append(MuslimCalendarTahajudSensor(coordinator))
+    # Tahajjud
+    entities.append(MuslimCalendarTahajjudSensor(coordinator))
 
-    # Date Hijri (un seul capteur)
+    # Hijri Date
     entities.append(MuslimCalendarDateSensor(coordinator))
 
-    # Mois Prochain (state = date debut)
-    entities.append(MuslimCalendarNextMonthSensor(coordinator))
+    # Next Months
+    entities.append(MuslimCalendarNextMonthsSensor(coordinator))
 
-    # Evenements Islamiques (attributes par type)
+    # Events
     entities.append(MuslimCalendarEventsSensor(coordinator))
 
-    # Creneaux Interdits (state 0/1)
+    # Makruh Ibadah
     entities.append(MuslimCalendarForbiddenSensor(coordinator))
-
-    # Calendrier iCal
-    entities.append(MuslimCalendarCalendarSensor(coordinator))
 
     async_add_entities(entities, update_before_add=True)

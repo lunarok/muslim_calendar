@@ -20,6 +20,8 @@ from .const import (
     DEFAULT_LOCATION,
     CALC_METHODS,
     HIJRI_MONTHS_FR,
+    HIJRI_MONTHS_EN,
+    HIJRI_MONTH_KEYS,
     ISLAMIC_EVENTS,
 )
 
@@ -33,7 +35,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
 
-    await hass.config_entries.async_forward_entry_setups(entry, ["sensor"])
+    await hass.config_entries.async_forward_entry_setups(entry, ["sensor", "calendar"])
 
     return True
 
@@ -120,17 +122,17 @@ class MuslimCalendarDataUpdateCoordinator(DataUpdateCoordinator):
         dhuhr = prayer_times.get("dhuhr", INVALID_TIME)
         forbidden_now = _is_in_forbidden_slot(shuruq, maghrib, dhuhr)
         forbidden_slots = {
-            "slot1_start": shuruq,
-            "slot1_end": _add_minutes(shuruq, 20),
-            "slot2_start": dhuhr,
-            "slot2_end": _add_minutes(dhuhr, 20),
-            "slot3_start": _add_minutes(maghrib, -20),
-            "slot3_end": maghrib,
+            "tulu_start": shuruq,
+            "tulu_end": _add_minutes(shuruq, 20),
+            "istiwa_start": dhuhr,
+            "istiwa_end": _add_minutes(dhuhr, 20),
+            "ghurub_start": _add_minutes(maghrib, -20),
+            "ghurub_end": maghrib,
         }
 
         # Dates Hijri
         hijri_info = _get_hijri_info(today)
-        hijri_date_full = f"{hijri_info['day']} {HIJRI_MONTHS_FR.get(hijri_info['month'], '?')} {hijri_info['year']}"
+        hijri_date_full = f"{hijri_info['day']} {HIJRI_MONTHS_EN.get(hijri_info['month'], '?')} {hijri_info['year']}"
         hijri_info["date_full"] = hijri_date_full
 
         # Mois Hijri
@@ -162,7 +164,6 @@ class MuslimCalendarDataUpdateCoordinator(DataUpdateCoordinator):
             "all_events": all_events,
             "next_event": next_event,
             "event_by_type": event_by_type,
-            "calendar_ical": calendar_ical,
             "tomorrow_prayer_times": await self.hass.async_add_executor_job(
                 _calculate_prayer_times, lat, lon, calc_method, adjustments,
                 today + timedelta(days=1)
@@ -350,9 +351,8 @@ def _find_month_starts(start_date, count: int = 12) -> list:
                 starts.append({
                     "date": current.isoformat(),
                     "gregorian": current.strftime("%Y-%m-%d"),
-                    "hijri": f"{h.day:02d}-{h.month:02d}-{h.year}",
                     "month": h.month,
-                    "month_name": HIJRI_MONTHS_FR.get(h.month, "?"),
+                    "month_name": HIJRI_MONTHS_EN.get(h.month, "?"),
                 })
                 found += 1
             prev_month = h.month
