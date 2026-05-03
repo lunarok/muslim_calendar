@@ -125,7 +125,7 @@ class MuslimCalendarDateSensor(MuslimCalendarSensor):
             coordinator=coordinator,
             unique_id_suffix="hijri_date",
             name="Date Hijri",
-            icon="mdi:calendar伊斯兰",
+            icon="mdi:calendar islam",
             key_path="hijri_date/date_full",
         )
 
@@ -292,7 +292,7 @@ class MuslimCalendarCalendarSensor(MuslimCalendarSensor):
             coordinator=coordinator,
             unique_id_suffix="calendar",
             name="Calendrier Islamique",
-            icon="mdi:calendar伊斯兰",
+            icon="mdi:calendar islam",
         )
 
     @property
@@ -322,14 +322,14 @@ async def async_setup_entry(hass, entry, async_add_entities):
     entities = []
 
     # Heures de priere
-    for key_path, name, icon in PRAYER_SENSORS:
+    for idx, (key_path, name, icon) in enumerate(PRAYER_SENSORS):
         suffix = key_path.replace("/", "_")
-        entities.append(MuslimCalendarSensor(coordinator, f"prayer_{suffix}", name, icon, key_path))
+        entities.append(MuslimCalendarSensor(coordinator, f"prayer_{idx}_{suffix}", name, icon, key_path))
 
     # Iqamah
-    for key_path, name, icon in IQAMAH_SENSORS:
+    for idx, (key_path, name, icon) in enumerate(IQAMAH_SENSORS):
         suffix = key_path.replace("/", "_")
-        entities.append(MuslimCalendarSensor(coordinator, f"iqamah_{suffix}", name, icon, key_path))
+        entities.append(MuslimCalendarSensor(coordinator, f"iqamah_{idx}_{suffix}", name, icon, key_path))
 
     # Imsak
     entities.append(MuslimCalendarImsakSensor(coordinator))
