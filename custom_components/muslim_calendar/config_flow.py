@@ -145,6 +145,7 @@ class MuslimCalendarOptionsFlow(OptionsFlow):
     async def async_step_init(self, user_input=None):
         errors = {}
         config = self.config_entry.data
+        self._location_options = await get_location_options(self.hass)
 
         if user_input is not None:
             location = user_input.get("location", config.get("location", "custom"))
@@ -186,7 +187,6 @@ class MuslimCalendarOptionsFlow(OptionsFlow):
             }
             return self.async_create_entry(title="", data=data)
 
-        self._location_options = await get_location_options(self.hass)
         current = self.config_entry.data
 
         schema_dict = {
