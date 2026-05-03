@@ -32,20 +32,24 @@ async def get_location_options(hass) -> dict:
     try:
         entity_registry = er.async_get(hass)
         for entity_id, entry in entity_registry.entities.items():
-            if entry.domain not in ("device_tracker", "zone"):
+            # Only device_tracker domain
+            if entry.domain != "device_tracker":
                 continue
             state = hass.states.get(entity_id)
             if not state or not state.attributes:
                 continue
-            source_type = str(state.attributes.get("source_type", "")).lower()
-            if "mobile_app" not in source_type:
-                continue
+            # Must have GPS coordinates to be useful
             lat = state.attributes.get("latitude")
             lon = state.attributes.get("longitude")
             if lat is None or lon is None:
                 continue
-            device_name = state.name or entity_id.split(".")[-1]
-            options[entity_id] = {"name": device_name, "lat": lat, "lon": lon}
+            # Get device name
+            device_name = state.name
+            if not device_name:
+                device_name = state.attributes.get("device_name", "")
+            if not device_name:
+                device_name = entity_id.split(".")[-1]
+            options[entity_id] = {"name": str(device_name), "lat": lat, "lon": lon}
     except Exception as e:
         _LOGGER.warning(f"Could not get device trackers: {e}")
 
@@ -145,6 +149,12 @@ class MuslimCalendarOptionsFlow(OptionsFlow):
         config = self.config_entry.data
         current_loc = config.get("location", "custom")
 
+        # Load locations first - needed for both initial display and submission
+        locations = await get_location_options(self.hass)
+        loc_choices = {k: v["name"] for k, v in locations.items()}
+        if current_loc not in loc_choices:
+            loc_choices["custom"] = "Personnalisee (coordonnees)"
+
         if user_input is not None:
             method = user_input.get("method", config.get("method", "isna"))
             location = user_input.get("location", current_loc)
@@ -167,7 +177,6 @@ class MuslimCalendarOptionsFlow(OptionsFlow):
                     lat = config.get("lat", DEFAULT_LAT)
                     lon = config.get("lon", DEFAULT_LON)
             else:
-                locations = await get_location_options(self.hass)
                 loc = locations.get(location)
                 if loc:
                     lat = loc["lat"]
@@ -193,13 +202,6 @@ class MuslimCalendarOptionsFlow(OptionsFlow):
                 "iqamah_isha": iqamah_isha,
             }
             return self.async_create_entry(title="", data=data)
-
-        locations = await get_location_options(self.hass)
-        loc_choices = {k: v["name"] for k, v in locations.items()}
-
-        # Ensure current location is in choices (fallback to custom if not)
-        if current_loc not in loc_choices:
-            loc_choices["custom"] = "Personnalisee (coordonnees)"
 
         schema = vol.Schema({
             vol.Required("location", default=current_loc): vol.In(loc_choices),
