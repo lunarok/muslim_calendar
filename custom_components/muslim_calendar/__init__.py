@@ -110,14 +110,14 @@ class MuslimCalendarDataUpdateCoordinator(DataUpdateCoordinator):
 
         # Tahajud (dernier tiers de la nuit = 2/3 entre Isha et Fajr lendemain)
         tahajud_time = _calculate_tahajud(
-            prayer_times.get("isha", "--:--"),
-            prayer_times.get("fajr", "--:--")
+            prayer_times.get("isha", INVALID_TIME),
+            prayer_times.get("fajr", INVALID_TIME)
         )
 
         # Creneaux interdits (3 slots) + etat binaire
-        shuruq = prayer_times.get("shuruq", "--:--")
-        maghrib = prayer_times.get("maghrib", "--:--")
-        dhuhr = prayer_times.get("dhuhr", "--:--")
+        shuruq = prayer_times.get("shuruq", INVALID_TIME)
+        maghrib = prayer_times.get("maghrib", INVALID_TIME)
+        dhuhr = prayer_times.get("dhuhr", INVALID_TIME)
         forbidden_now = _is_in_forbidden_slot(shuruq, maghrib, dhuhr)
         forbidden_slots = {
             "slot1_start": shuruq,
@@ -171,24 +171,36 @@ class MuslimCalendarDataUpdateCoordinator(DataUpdateCoordinator):
 
 
 # =============================================================================
+# CONSTANTES
+# =============================================================================
+
+INVALID_TIME = "--:--"
+
+KEY_MAP = {
+    "Sunrise": "shuruq",
+    "Midnight": "midnight",
+}
+
+
+# =============================================================================
 # FONCTIONS DE CALCUL
 # =============================================================================
 
 def _add_minutes(time_str: str, minutes: int) -> str:
-    if not time_str or time_str == "--:----":
-        return "--:----"
+    if not time_str or time_str == INVALID_TIME:
+        return INVALID_TIME
     try:
         parts = time_str.split(":")
         hour, minute = int(parts[0]), int(parts[1])
         total = hour * 60 + minute + minutes
         return f"{(total // 60) % 24:02d}:{total % 60:02d}"
     except Exception:
-        return time_str
+        return INVALID_TIME
 
 
 def _time_to_minutes(time_str: str) -> int:
     """Convertit HH:MM en minutes depuis minuit."""
-    if not time_str or time_str == "--:----":
+    if not time_str or time_str == INVALID_TIME:
         return 0
     try:
         parts = time_str.split(":")
@@ -214,7 +226,7 @@ def _calculate_tahajud(isha: str, fajr_tomorrow: str) -> str:
         minute = tahajud % 60
         return f"{hour:02d}:{minute:02d}"
     except Exception:
-        return "--:--"
+        return INVALID_TIME
 
 
 def _is_in_forbidden_slot(shuruq: str, maghrib: str, dhuhr: str) -> bool:
@@ -264,19 +276,19 @@ def _calculate_prayer_times(
 
     result = {}
     for prayer in ["Fajr", "Sunrise", "Dhuhr", "Asr", "Maghrib", "Isha", "Midnight"]:
-        key = prayer.lower()
+        key = KEY_MAP.get(prayer, prayer.lower())
         time_str = raw.get(prayer)
         if time_str:
             result[key] = _add_minutes(time_str, adjustments.get(prayer, 0))
         else:
-            result[key] = "--:----"
+            result[key] = INVALID_TIME
     return result
 
 
 def _calculate_iqamah(prayer_times: Dict, offsets: Dict) -> Dict[str, str]:
     result = {}
     for prayer in ["fajr", "dhuhr", "asr", "maghrib", "isha"]:
-        time = prayer_times.get(prayer, "--:----")
+        time = prayer_times.get(prayer, INVALID_TIME)
         offset = offsets.get(prayer.title(), 15)
         result[f"iqamah_{prayer}"] = _add_minutes(time, offset)
     return result

@@ -6,6 +6,7 @@ import logging
 import voluptuous as vol
 from homeassistant.config_entries import ConfigFlow, OptionsFlow
 from homeassistant.helpers import entity_registry as er
+from homeassistant.components.selector import NumberSelector, NumberSelectorConfig, NumberSelectorMode
 
 from .const import DOMAIN, CALC_METHODS
 
@@ -30,9 +31,8 @@ async def get_location_options(hass) -> dict:
     # 2. Device trackers depuis les apps mobiles
     try:
         entity_registry = er.async_get(hass)
-        for entry_id, entry in entity_registry.entities.items():
+        for entity_id, entry in entity_registry.entities.items():
             if entry.domain == "device_tracker":
-                entity_id = f"device_tracker.{entry_id}"
                 state = hass.states.get(entity_id)
                 if state and state.attributes:
                     source_type = state.attributes.get("source_type", "")
@@ -40,7 +40,7 @@ async def get_location_options(hass) -> dict:
                         lat = state.attributes.get("latitude")
                         lon = state.attributes.get("longitude")
                         if lat is not None and lon is not None:
-                            device_name = state.name or entry_id.split(".")[-1]
+                            device_name = state.name or entity_id.split(".")[-1]
                             options[entity_id] = {
                                 "name": f"{device_name}",
                                 "lat": lat,
@@ -114,8 +114,12 @@ class MuslimCalendarConfigFlow(ConfigFlow, domain=DOMAIN):
                 {k: v["name"] for k, v in self._location_options.items()}
             ),
             vol.Required("method", default="isna"): vol.In(list(CALC_METHODS.keys())),
-            vol.Optional("lat"): vol.Coerce(float),
-            vol.Optional("lon"): vol.Coerce(float),
+            vol.Optional("lat", default=47.4): NumberSelector(
+                NumberSelectorConfig(min=-90, max=90, step=0.0001, mode=NumberSelectorMode.BOX)
+            ),
+            vol.Optional("lon", default=-0.64): NumberSelector(
+                NumberSelectorConfig(min=-180, max=180, step=0.0001, mode=NumberSelectorMode.BOX)
+            ),
             vol.Optional("adjust_fajr", default=0): vol.Coerce(int),
             vol.Optional("adjust_dhuhr", default=0): vol.Coerce(int),
             vol.Optional("adjust_asr", default=0): vol.Coerce(int),
@@ -194,8 +198,12 @@ class MuslimCalendarOptionsFlow(OptionsFlow):
                 {k: v["name"] for k, v in self._location_options.items()}
             ),
             vol.Required("method", default=current.get("method", "isna")): vol.In(list(CALC_METHODS.keys())),
-            vol.Optional("lat", default=current.get("lat")): vol.Coerce(float),
-            vol.Optional("lon", default=current.get("lon")): vol.Coerce(float),
+            vol.Optional("lat", default=current.get("lat", 47.4)): NumberSelector(
+                NumberSelectorConfig(min=-90, max=90, step=0.0001, mode=NumberSelectorMode.BOX)
+            ),
+            vol.Optional("lon", default=current.get("lon", -0.64)): NumberSelector(
+                NumberSelectorConfig(min=-180, max=180, step=0.0001, mode=NumberSelectorMode.BOX)
+            ),
             vol.Optional("adjust_fajr", default=current.get("adjust_fajr", 0)): vol.Coerce(int),
             vol.Optional("adjust_dhuhr", default=current.get("adjust_dhuhr", 0)): vol.Coerce(int),
             vol.Optional("adjust_asr", default=current.get("adjust_asr", 0)): vol.Coerce(int),
