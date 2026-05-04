@@ -102,9 +102,9 @@ The 3 slots represent times when prayer is makruh:
 |---|---|
 | `tulu_start` | Shuruq (sunrise) |
 | `tulu_end` | Shuruq + 20 min |
-| istiwa_start | Dhuhr (zawwal) |
-| istiwa_end | Dhuhr + 20 min |
-| `ghurub_start` | Maghrib - 20 min |
+| `istiwa_start` | Dhuhr - 10 min |
+| `istiwa_end` | Dhuhr |
+| `ghurub_start` | Maghrib - 15 min |
 | `ghurub_end` | Maghrib |
 
 ### Native Calendar Entity
@@ -127,11 +127,11 @@ The plugin automatically detects:
 | `adjust_asr` | Offset for Asr |
 | `adjust_maghrib` | Offset for Maghrib |
 | `adjust_isha` | Offset for Isha |
-| `iqamah_fajr` | Iqamah delay after Fajr (default: 20 min) |
-| `iqamah_dhuhr` | Iqamah delay after Dhuhr (default: 15 min) |
-| `iqamah_asr` | Iqamah delay after Asr (default: 15 min) |
-| `iqamah_maghrib` | Iqamah delay after Maghrib (default: 10 min) |
-| `iqamah_isha` | Iqamah delay after Isha (default: 15 min) |
+| `iqamah_fajr` | Iqamah delay after Fajr (default: 10 min) |
+| `iqamah_dhuhr` | Iqamah delay after Dhuhr (default: 10 min) |
+| `iqamah_asr` | Iqamah delay after Asr (default: 10 min) |
+| `iqamah_maghrib` | Iqamah delay after Maghrib (default: 5 min) |
+| `iqamah_isha` | Iqamah delay after Isha (default: 5 min) |
 
 ## Calculation Methods
 
