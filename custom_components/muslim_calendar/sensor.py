@@ -285,7 +285,7 @@ class MuslimCalendarNextPrayerSensor(MuslimCalendarSensor):
             coordinator=coordinator,
             unique_id_suffix="next_prayer",
             name="Next Prayer",
-            icon="mdi:clock-next",
+            icon="mdi:weather-sunny",
         )
 
     @property
@@ -358,6 +358,44 @@ class MuslimCalendarTomorrowImsakSensor(MuslimCalendarSensor):
 
 
 # =============================================================================
+# TOMORROW PRAYERS SENSOR
+# =============================================================================
+
+class MuslimCalendarTomorrowPrayersSensor(MuslimCalendarSensor):
+    """Tomorrow's 5 mandatory prayer times."""
+
+    def __init__(self, coordinator):
+        super().__init__(
+            coordinator=coordinator,
+            unique_id_suffix="tomorrow_prayers",
+            name="Tomorrow Prayers",
+            icon="mdi:calendar tomorrow",
+        )
+
+    @property
+    def state(self):
+        data = self.coordinator.data
+        if not data:
+            return "Unknown"
+        tp = data.get("tomorrow_prayers", {})
+        return tp.get("fajr", "Unknown")
+
+    @property
+    def extra_state_attributes(self):
+        data = self.coordinator.data
+        if not data:
+            return {}
+        tp = data.get("tomorrow_prayers", {})
+        return {
+            "fajr": tp.get("fajr", ""),
+            "dhuhr": tp.get("dhuhr", ""),
+            "asr": tp.get("asr", ""),
+            "maghrib": tp.get("maghrib", ""),
+            "isha": tp.get("isha", ""),
+        }
+
+
+# =============================================================================
 # PLATFORM SETUP
 # =============================================================================
 
@@ -400,6 +438,9 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
     # Tomorrow Imsak
     entities.append(MuslimCalendarTomorrowImsakSensor(coordinator))
+
+    # Tomorrow Prayers
+    entities.append(MuslimCalendarTomorrowPrayersSensor(coordinator))
 
     # Hijri Date
     entities.append(MuslimCalendarDateSensor(coordinator))

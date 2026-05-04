@@ -179,6 +179,7 @@ class MuslimCalendarDataUpdateCoordinator(DataUpdateCoordinator):
             "event_by_type": event_by_type,
             "next_prayer": next_prayer,
             "tomorrow_imsak": tomorrow_imsak,
+            "tomorrow_prayers": tomorrow_prayers,
             "tomorrow_prayer_times": tomorrow_prayer_times,
         }
 
