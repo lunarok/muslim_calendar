@@ -257,7 +257,7 @@ def _calculate_prayer_times(
     try:
         from datetime import datetime
         from zoneinfo import ZoneInfo
-        from adhanpy import PrayerTimes as AdhanPrayerTimes
+        from adhanpy.PrayerTimes import PrayerTimes as AdhanPrayerTimes
         from adhanpy.calculation.CalculationMethod import CalculationMethod
         from adhanpy.calculation.CalculationParameters import CalculationParameters
 
