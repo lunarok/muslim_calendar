@@ -100,11 +100,11 @@ class MuslimCalendarConfigFlow(ConfigFlow, domain=DOMAIN):
                     "adjust_asr": int(user_input.get("adjust_asr", 0)),
                     "adjust_maghrib": int(user_input.get("adjust_maghrib", 0)),
                     "adjust_isha": int(user_input.get("adjust_isha", 0)),
-                    "iqamah_fajr": int(user_input.get("iqamah_fajr", 20)),
-                    "iqamah_dhuhr": int(user_input.get("iqamah_dhuhr", 15)),
-                    "iqamah_asr": int(user_input.get("iqamah_asr", 15)),
-                    "iqamah_maghrib": int(user_input.get("iqamah_maghrib", 10)),
-                    "iqamah_isha": int(user_input.get("iqamah_isha", 15)),
+                    "iqamah_fajr": int(user_input.get("iqamah_fajr", 10)),
+                    "iqamah_dhuhr": int(user_input.get("iqamah_dhuhr", 10)),
+                    "iqamah_asr": int(user_input.get("iqamah_asr", 10)),
+                    "iqamah_maghrib": int(user_input.get("iqamah_maghrib", 5)),
+                    "iqamah_isha": int(user_input.get("iqamah_isha", 5)),
                 }
                 loc_name = locations.get(location, {}).get("name", location)
                 return self.async_create_entry(title=f"Muslim Calendar ({loc_name})", data=data)
@@ -158,11 +158,11 @@ class MuslimCalendarOptionsFlow(OptionsFlow):
         if user_input is not None:
             method = user_input.get("method", config.get("method", "isna"))
             location = user_input.get("location", current_loc)
-            iqamah_fajr = int(user_input.get("iqamah_fajr", 20))
-            iqamah_dhuhr = int(user_input.get("iqamah_dhuhr", 15))
-            iqamah_asr = int(user_input.get("iqamah_asr", 15))
-            iqamah_maghrib = int(user_input.get("iqamah_maghrib", 10))
-            iqamah_isha = int(user_input.get("iqamah_isha", 15))
+            iqamah_fajr = int(user_input.get("iqamah_fajr", 10))
+            iqamah_dhuhr = int(user_input.get("iqamah_dhuhr", 10))
+            iqamah_asr = int(user_input.get("iqamah_asr", 10))
+            iqamah_maghrib = int(user_input.get("iqamah_maghrib", 5))
+            iqamah_isha = int(user_input.get("iqamah_isha", 5))
             adjust_fajr = int(user_input.get("adjust_fajr", 0))
             adjust_dhuhr = int(user_input.get("adjust_dhuhr", 0))
             adjust_asr = int(user_input.get("adjust_asr", 0))
