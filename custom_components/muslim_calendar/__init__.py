@@ -1,5 +1,5 @@
 """
-Muslim Calendar - Integration Home Assistant pour les heures de priere islamiques et le calendrier Hijri.
+Muslim Calendar - Integration Home Assistant for Islamic prayer times and Hijri calendar.
 """
 
 import logging
@@ -19,13 +19,14 @@ from .const import (
     DEVICE_MODEL,
     DEFAULT_LOCATION,
     CALC_METHODS,
-    HIJRI_MONTHS_FR,
     HIJRI_MONTHS_EN,
     HIJRI_MONTH_KEYS,
     ISLAMIC_EVENTS,
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+INVALID_TIME = "--:--"  # was "--:----" before
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -46,10 +47,6 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.data[DOMAIN].pop(entry.entry_id)
     return unload_ok
 
-
-# =============================================================================
-# COORDINATOR
-# =============================================================================
 
 class MuslimCalendarDataUpdateCoordinator(DataUpdateCoordinator):
     """Coordonne les donnees Muslim Calendar (mise a jour toutes les heures)."""
@@ -83,7 +80,7 @@ class MuslimCalendarDataUpdateCoordinator(DataUpdateCoordinator):
 
         lat = self._config.get("lat", DEFAULT_LOCATION["lat"])
         lon = self._config.get("lon", DEFAULT_LOCATION["lon"])
-        calc_method = self._config.get("method", "isna")
+        calc_method = self._config.get("method", "makkah")
         adjustments = {
             "Fajr": self._config.get("adjust_fajr", 0),
             "Dhuhr": self._config.get("adjust_dhuhr", 0),
@@ -92,23 +89,26 @@ class MuslimCalendarDataUpdateCoordinator(DataUpdateCoordinator):
             "Isha": self._config.get("adjust_isha", 0),
         }
         iqamah_offsets = {
-            "Fajr": self._config.get("iqamah_fajr", 20),
-            "Dhuhr": self._config.get("iqamah_dhuhr", 15),
-            "Asr": self._config.get("iqamah_asr", 15),
-            "Maghrib": self._config.get("iqamah_maghrib", 10),
-            "Isha": self._config.get("iqamah_isha", 15),
+            "Fajr": self._config.get("iqamah_fajr", 10),
+            "Dhuhr": self._config.get("iqamah_dhuhr", 10),
+            "Asr": self._config.get("iqamah_asr", 10),
+            "Maghrib": self._config.get("iqamah_maghrib", 5),
+            "Isha": self._config.get("iqamah_isha", 5),
         }
+        fajr_angle = self._config.get("fajr_angle")
+        isha_angle = self._config.get("isha_angle")
 
         # Heures de priere
         prayer_times = await self.hass.async_add_executor_job(
-            _calculate_prayer_times, lat, lon, calc_method, adjustments, today
+            _calculate_prayer_times, lat, lon, calc_method, adjustments, today,
+            fajr_angle, isha_angle
         )
 
         # Iqamah
         iqamah_times = _calculate_iqamah(prayer_times, iqamah_offsets)
 
         # Imsak (10 minutes avant Fajr)
-        imsak_time = _add_minutes(prayer_times.get("fajr", "--:--"), -10)
+        imsak_time = _add_minutes(prayer_times.get("fajr", INVALID_TIME), -10)
 
         # Tahajud (dernier tiers de la nuit = 2/3 entre Isha et Fajr lendemain)
         tahajud_time = _calculate_tahajud(
@@ -120,13 +120,16 @@ class MuslimCalendarDataUpdateCoordinator(DataUpdateCoordinator):
         shuruq = prayer_times.get("shuruq", INVALID_TIME)
         maghrib = prayer_times.get("maghrib", INVALID_TIME)
         dhuhr = prayer_times.get("dhuhr", INVALID_TIME)
-        forbidden_now = _is_in_forbidden_slot(shuruq, maghrib, dhuhr)
+        tulu_offset = self._config.get("tulu_offset", 20)
+        istiwa_offset = self._config.get("istiwa_offset", 10)
+        ghurub_offset = self._config.get("ghurub_offset", 15)
+        forbidden_now = _is_in_forbidden_slot(shuruq, maghrib, dhuhr, tulu_offset, istiwa_offset, ghurub_offset)
         forbidden_slots = {
             "tulu_start": shuruq,
-            "tulu_end": _add_minutes(shuruq, 20),
-            "istiwa_start": _add_minutes(dhuhr, -10),
+            "tulu_end": _add_minutes(shuruq, tulu_offset),
+            "istiwa_start": _add_minutes(dhuhr, -istiwa_offset),
             "istiwa_end": dhuhr,
-            "ghurub_start": _add_minutes(maghrib, -15),
+            "ghurub_start": _add_minutes(maghrib, -ghurub_offset),
             "ghurub_end": maghrib,
         }
 
@@ -140,17 +143,15 @@ class MuslimCalendarDataUpdateCoordinator(DataUpdateCoordinator):
         next_month = month_starts[0] if month_starts else None
 
         # Evenements - avec attribut par type d'evenement (10 types)
-        all_events = _find_events(today, 365)  # chercher sur 1 an
+        all_events = _find_events(today, 365)
         event_by_type = _build_event_index(all_events)
         next_event = all_events[0] if all_events else None
-
-        # Calendrier iCal pour Home Assistant Calendar
-        calendar_ical = _build_icalendar(next_event, all_events, month_starts)
 
         # Tomorrow's prayer times (needed for next prayer calculation and tomorrow imsak)
         tomorrow_prayer_times = await self.hass.async_add_executor_job(
             _calculate_prayer_times, lat, lon, calc_method, adjustments,
-            today + timedelta(days=1)
+            today + timedelta(days=1),
+            fajr_angle, isha_angle
         )
 
         # Next prayer time
@@ -168,9 +169,6 @@ class MuslimCalendarDataUpdateCoordinator(DataUpdateCoordinator):
             "maghrib": tomorrow_prayer_times.get("maghrib", INVALID_TIME),
             "isha": tomorrow_prayer_times.get("isha", INVALID_TIME),
         }
-
-        # Next prayer time
-        next_prayer = _get_next_prayer(prayer_times, tomorrow_prayer_times)
 
         return {
             "prayer_times": prayer_times,
@@ -196,22 +194,6 @@ class MuslimCalendarDataUpdateCoordinator(DataUpdateCoordinator):
         }
 
 
-# =============================================================================
-# CONSTANTES
-# =============================================================================
-
-INVALID_TIME = "--:--"
-
-KEY_MAP = {
-    "Sunrise": "shuruq",
-    "Midnight": "midnight",
-}
-
-
-# =============================================================================
-# FONCTIONS DE CALCUL
-# =============================================================================
-
 def _add_minutes(time_str: str, minutes: int) -> str:
     if not time_str or time_str == INVALID_TIME:
         return INVALID_TIME
@@ -225,7 +207,6 @@ def _add_minutes(time_str: str, minutes: int) -> str:
 
 
 def _time_to_minutes(time_str: str) -> int:
-    """Convertit HH:MM en minutes depuis minuit."""
     if not time_str or time_str == INVALID_TIME:
         return 0
     try:
@@ -236,17 +217,12 @@ def _time_to_minutes(time_str: str) -> int:
 
 
 def _calculate_tahajud(isha: str, fajr_tomorrow: str) -> str:
-    """Calcule Tahajud = 2/3 entre Isha et Fajr lendemain."""
     try:
         isha_min = _time_to_minutes(isha)
-        # Fajr lendemain = minuit + minutes depuis minuit
         fajr_min = _time_to_minutes(fajr_tomorrow)
-        # Si Fajr < Isha, ajouter 24h
         if fajr_min <= isha_min:
             fajr_min += 24 * 60
-        # Nuit = Fajr - Isha en minutes
         nuit = fajr_min - isha_min
-        # Tahajud = Isha + 2/3 de la nuit
         tahajud = isha_min + int(nuit * 2 / 3)
         hour = (tahajud // 60) % 24
         minute = tahajud % 60
@@ -255,67 +231,76 @@ def _calculate_tahajud(isha: str, fajr_tomorrow: str) -> str:
         return INVALID_TIME
 
 
-def _is_in_forbidden_slot(shuruq: str, maghrib: str, dhuhr: str) -> bool:
-    """Retourne 1 si l'heure actuelle est dans un slot interdit."""
+def _is_in_forbidden_slot(shuruq: str, maghrib: str, dhuhr: str, tulu_offset: int = 20, istiwa_offset: int = 10, ghurub_offset: int = 15) -> bool:
     now = datetime.now()
     now_min = now.hour * 60 + now.minute
-
-    # Slot 1: Shuruq a Shuruq + 20
     s1_start = _time_to_minutes(shuruq)
-    s1_end = s1_start + 20
-
-    # Slot 2: Dhuhr a Dhuhr + 20 (zawwal)
-    s2_start = _time_to_minutes(dhuhr)
-    s2_end = s2_start + 20
-
-    # Slot 3: Maghrib - 20 a Maghrib
-    s3_start = _time_to_minutes(maghrib) - 20
+    s1_end = s1_start + tulu_offset
+    s2_start = _time_to_minutes(dhuhr) - istiwa_offset
+    s2_end = _time_to_minutes(dhuhr)
+    s3_start = _time_to_minutes(maghrib) - ghurub_offset
     s3_end = _time_to_minutes(maghrib)
-
-    # Gerer le cas ou Maghrib < Shuruq dans la journee (passage a minuit)
     if s3_start < 0:
         s3_start += 24 * 60
         s3_end += 24 * 60
-
     in_slot1 = s1_start <= now_min < s1_end
     in_slot2 = s2_start <= now_min < s2_end
     in_slot3 = s3_start <= now_min < s3_end
-
     return in_slot1 or in_slot2 or in_slot3
 
 
 def _calculate_prayer_times(
     lat: float, lon: float, calc_method: str,
-    adjustments: Dict[str, int], target_date
+    adjustments: Dict[str, int], target_date,
+    fajr_angle: float = None, isha_angle: float = None
 ) -> Dict[str, str]:
     try:
-        from prayer_times_calculator import PrayerTimesCalculator
-        calc = PrayerTimesCalculator(
-            latitude=lat, longitude=lon,
-            calculation_method=calc_method,
-            date=str(target_date),
-        )
-        raw = calc.fetch_prayer_times()
+        import python_adhan
+        from python_adhan import AdhanCalculator
+        method_map = {
+            "isna": python_adhan.CalculationMethod.ISNA,
+            "mwl": python_adhan.CalculationMethod.MWL,
+            "makkah": python_adhan.CalculationMethod.MAKKAH,
+            "egypt": python_adhan.CalculationMethod.EGYPT,
+            "karachi": python_adhan.CalculationMethod.KARACHI,
+            "koc": python_adhan.CalculationMethod.KOC,
+            "kuwait": python_adhan.CalculationMethod.KUWAIT,
+            "qatar": python_adhan.CalculationMethod.QATAR,
+            "singapore": python_adhan.CalculationMethod.SINGAPORE,
+            "france": python_adhan.CalculationMethod.FRANCE,
+            "turkey": python_adhan.CalculationMethod.TURKEY,
+            "jafari": python_adhan.CalculationMethod.JAFARI,
+            "london": python_adhan.CalculationMethod.LONDON,
+            "dubai": python_adhan.CalculationMethod.DUBAI,
+        }
+        if calc_method == "custom" and fajr_angle is not None and isha_angle is not None:
+            adhan_method = python_adhan.CalculationMethod.MAKKAH
+            result = AdhanCalculator.get_adhan(
+                adhan_method, lat, lon, str(target_date),
+                fajr_angle=fajr_angle, isha_angle=isha_angle
+            )
+        else:
+            adhan_method = method_map.get(calc_method, python_adhan.CalculationMethod.MAKKAH)
+            result = AdhanCalculator.get_adhan(adhan_method, lat, lon, str(target_date))
     except Exception as e:
         _LOGGER.error(f"Prayer times calculation failed: {e}")
         return {}
-
-    result = {}
-    for prayer in ["Fajr", "Sunrise", "Dhuhr", "Asr", "Maghrib", "Isha", "Midnight"]:
-        key = KEY_MAP.get(prayer, prayer.lower())
-        time_str = raw.get(prayer)
+    output = {}
+    for prayer in ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha", "Midnight"]:
+        time_str = result.get(prayer, INVALID_TIME)
         if time_str:
-            result[key] = _add_minutes(time_str, adjustments.get(prayer, 0))
+            output[prayer.lower()] = _add_minutes(time_str, adjustments.get(prayer, 0))
         else:
-            result[key] = INVALID_TIME
-    return result
+            output[prayer.lower()] = INVALID_TIME
+    output["shuruq"] = result.get("Sunrise", INVALID_TIME)
+    return output
 
 
 def _calculate_iqamah(prayer_times: Dict, offsets: Dict) -> Dict[str, str]:
     result = {}
     for prayer in ["fajr", "dhuhr", "asr", "maghrib", "isha"]:
         time = prayer_times.get(prayer, INVALID_TIME)
-        offset = offsets.get(prayer.title(), 15)
+        offset = offsets.get(prayer.title(), 10)
         result[f"iqamah_{prayer}"] = _add_minutes(time, offset)
     return result
 
@@ -326,14 +311,16 @@ def _get_hijri_info(target_date) -> Dict:
         h = hijridate.Gregorian(target_date.year, target_date.month, target_date.day).to_hijri()
         return {"day": h.day, "month": h.month, "year": h.year}
     except Exception:
-        return {"day": 1, "month": 1, "year": 1445}
+        return {"day": 1, "month": 1, "year": 1447}
 
 
 def _find_events(start_date, count: int = 365) -> list:
     events = []
     current = start_date
+    prev_month = None
+    found = 0
     for _ in range(400):
-        if len(events) >= count:
+        if found >= count:
             break
         try:
             import hijridate
@@ -345,14 +332,38 @@ def _find_events(start_date, count: int = 365) -> list:
                 ev["gregorian"] = current.strftime("%Y-%m-%d")
                 ev["hijri"] = f"{h.day:02d}-{h.month:02d}-{h.year}"
                 events.append(ev)
+                found += 1
+            # Last 10 Nights of Ramadan
+            if h.month == 9 and 21 <= h.day <= 30:
+                ev = {
+                    "name": "Last 10 Nights of Ramadan",
+                    "arabic": "العشر الأواخر من رمضان",
+                    "date": current.isoformat(),
+                    "gregorian": current.strftime("%Y-%m-%d"),
+                    "hijri": f"{h.day:02d}-{h.month:02d}-{h.year}",
+                }
+                events.append(ev)
+                found += 1
+            # 10 Most Blessed Days
+            if h.month == 12 and 1 <= h.day <= 10:
+                ev = {
+                    "name": "10 Most Blessed Days",
+                    "arabic": "العشر ذي الحجة",
+                    "date": current.isoformat(),
+                    "gregorian": current.strftime("%Y-%m-%d"),
+                    "hijri": f"{h.day:02d}-{h.month:02d}-{h.year}",
+                }
+                events.append(ev)
+                found += 1
+            prev_month = h.month
             current += timedelta(days=1)
         except Exception:
             current += timedelta(days=1)
-    return events
+    events.sort(key=lambda x: x.get("gregorian", ""))
+    return events[:count]
 
 
 def _build_event_index(events: list) -> dict:
-    """Construit un index par type d'evenement avec la prochaine occurrence."""
     index = {}
     for ev in events:
         ev_key = ev.get("name", "")
@@ -387,57 +398,15 @@ def _find_month_starts(start_date, count: int = 12) -> list:
     return starts
 
 
-def _build_icalendar(next_event, all_events, month_starts) -> str:
-    """Genere un calendrier iCal avec les evenements islamiques et debuts de mois."""
-    lines = [
-        "BEGIN:VCALENDAR",
-        "VERSION:2.0",
-        "PRODID:-//Muslim Calendar//EN",
-        "CALSCALE:GREGORIAN",
-        "METHOD:PUBLISH",
-        "X-WR-CALNAME:Calendrier Islamique",
-    ]
-
-    # Evenements
-    for ev in all_events[:50]:
-        try:
-            lines.append("BEGIN:VEVENT")
-            lines.append(f"DTSTART;VALUE=DATE:{ev['gregorian'].replace('-', '')}")
-            lines.append(f"SUMMARY:{ev['name']}")
-            lines.append(f"DESCRIPTION:{ev.get('arabic', '')}")
-            lines.append(f"UID:{ev['hijri']}@muslim-calendar")
-            lines.append("END:VEVENT")
-        except Exception:
-            pass
-
-    # Debuts de mois
-    for ms in month_starts[:12]:
-        try:
-            lines.append("BEGIN:VEVENT")
-            lines.append(f"DTSTART;VALUE=DATE:{ms['gregorian'].replace('-', '')}")
-            lines.append(f"SUMMARY:Debut {ms['month_name']}")
-            lines.append(f"UID:month-{ms['hijri']}@muslim-calendar")
-            lines.append("END:VEVENT")
-        except Exception:
-            pass
-
-    lines.append("END:VCALENDAR")
-    return "\r\n".join(lines)
-
-
 def _get_next_prayer(prayer_times: Dict[str, str], tomorrow_prayer_times: Dict = None) -> Dict:
-    """Returns the next prayer name and time, plus time remaining."""
     now = datetime.now()
     now_min = now.hour * 60 + now.minute
-
     prayers_order = ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"]
-    prayer_time_keys = ["fajr", "dhuhr", "asr", "maghrib", "isha"]
-
+    prayer_keys = ["fajr", "dhuhr", "asr", "maghrib", "isha"]
     next_prayer_name = None
     next_prayer_time = None
     next_prayer_key = None
-
-    for i, key in enumerate(prayer_time_keys):
+    for i, key in enumerate(prayer_keys):
         time_str = prayer_times.get(key, INVALID_TIME)
         if time_str == INVALID_TIME:
             continue
@@ -447,29 +416,22 @@ def _get_next_prayer(prayer_times: Dict[str, str], tomorrow_prayer_times: Dict =
             next_prayer_time = time_str
             next_prayer_key = key
             break
-
-    # If no prayer found today, it's Isha was before now (tomorrow's Fajr)
     if next_prayer_name is None:
         next_prayer_name = "Fajr"
         next_prayer_key = "fajr"
-        next_prayer_time = prayer_times.get("fajr", INVALID_TIME)
-        # Time remaining is until tomorrow's Fajr (already calculated as tomorrow_imsak + 10)
-
-    # Calculate minutes until next prayer
+        next_prayer_time = tomorrow_prayer_times.get("fajr", INVALID_TIME) if tomorrow_prayer_times else INVALID_TIME
     if next_prayer_time != INVALID_TIME:
         next_min = _time_to_minutes(next_prayer_time)
         if next_min <= now_min:
-            # Tomorrow - add 24h worth of minutes
             minutes_until = (24 * 60 - now_min) + next_min
         else:
             minutes_until = next_min - now_min
     else:
         minutes_until = 0
-
     return {
         "name": next_prayer_name,
         "key": next_prayer_key,
         "time": next_prayer_time,
         "minutes_until": minutes_until,
-        "iqamah": _add_minutes(next_prayer_time, 15) if next_prayer_time != INVALID_TIME else INVALID_TIME,
+        "iqamah": _add_minutes(next_prayer_time, 10) if next_prayer_time != INVALID_TIME else INVALID_TIME,
     }
