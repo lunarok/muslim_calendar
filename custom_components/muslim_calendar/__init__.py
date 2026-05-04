@@ -99,9 +99,10 @@ class MuslimCalendarDataUpdateCoordinator(DataUpdateCoordinator):
         isha_angle = self._config.get("isha_angle")
 
         # Heures de priere
+        tz_name = str(self.hass.config.time_zone) if self.hass.config.time_zone else "Europe/Paris"
         prayer_times = await self.hass.async_add_executor_job(
             _calculate_prayer_times, lat, lon, calc_method, adjustments, today,
-            fajr_angle, isha_angle
+            fajr_angle, isha_angle, tz_name
         )
 
         # Iqamah
@@ -151,7 +152,7 @@ class MuslimCalendarDataUpdateCoordinator(DataUpdateCoordinator):
         tomorrow_prayer_times = await self.hass.async_add_executor_job(
             _calculate_prayer_times, lat, lon, calc_method, adjustments,
             today + timedelta(days=1),
-            fajr_angle, isha_angle
+            fajr_angle, isha_angle, tz_name
         )
 
         # Next prayer time
@@ -252,7 +253,8 @@ def _is_in_forbidden_slot(shuruq: str, maghrib: str, dhuhr: str, tulu_offset: in
 def _calculate_prayer_times(
     lat: float, lon: float, calc_method: str,
     adjustments: Dict[str, int], target_date,
-    fajr_angle: float = None, isha_angle: float = None
+    fajr_angle: float = None, isha_angle: float = None,
+    tz_name: str = "UTC"
 ) -> Dict[str, str]:
     try:
         from datetime import datetime
@@ -278,12 +280,15 @@ def _calculate_prayer_times(
             "dubai": CalculationMethod.DUBAI,
         }
 
+        tz = ZoneInfo(tz_name)
+        dt_target = datetime.combine(target_date, datetime.min.time(), tz)
+
         if calc_method == "custom" and fajr_angle is not None and isha_angle is not None:
             params = CalculationParameters(fajr_angle=fajr_angle, isha_angle=isha_angle)
-            pt = AdhanPrayerTimes((lat, lon), datetime.combine(target_date, datetime.min.time()), calculation_parameters=params)
+            pt = AdhanPrayerTimes((lat, lon), dt_target, calculation_parameters=params, time_zone=tz)
         else:
             method = method_map.get(calc_method, CalculationMethod.UMM_AL_QURA)
-            pt = AdhanPrayerTimes((lat, lon), datetime.combine(target_date, datetime.min.time()), calculation_method=method)
+            pt = AdhanPrayerTimes((lat, lon), dt_target, calculation_method=method, time_zone=tz)
 
         def dt_to_str(dt):
             if dt is None:
@@ -351,17 +356,6 @@ def _find_events(start_date, count: int = 365) -> list:
                 ev = {
                     "name": "Last 10 Nights of Ramadan",
                     "arabic": "العشر الأواخر من رمضان",
-                    "date": current.isoformat(),
-                    "gregorian": current.strftime("%Y-%m-%d"),
-                    "hijri": f"{h.day:02d}-{h.month:02d}-{h.year}",
-                }
-                events.append(ev)
-                found += 1
-            # 10 Most Blessed Days
-            if h.month == 12 and 1 <= h.day <= 10:
-                ev = {
-                    "name": "10 Most Blessed Days",
-                    "arabic": "العشر ذي الحجة",
                     "date": current.isoformat(),
                     "gregorian": current.strftime("%Y-%m-%d"),
                     "hijri": f"{h.day:02d}-{h.month:02d}-{h.year}",
