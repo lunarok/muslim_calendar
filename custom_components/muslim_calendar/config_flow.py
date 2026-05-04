@@ -142,11 +142,11 @@ class MuslimCalendarConfigFlow(ConfigFlow, domain=DOMAIN):
 class MuslimCalendarOptionsFlow(OptionsFlow):
 
     def __init__(self, config_entry):
-        self.config_entry = config_entry
+        self._config_entry = config_entry
 
     async def async_step_init(self, user_input=None):
         errors = {}
-        config = self.config_entry.data
+        config = self._config_entry.data
         current_loc = config.get("location", "custom")
 
         # Load locations first - needed for both initial display and submission
