@@ -124,9 +124,9 @@ class MuslimCalendarDataUpdateCoordinator(DataUpdateCoordinator):
         forbidden_slots = {
             "tulu_start": shuruq,
             "tulu_end": _add_minutes(shuruq, 20),
-            "istiwa_start": dhuhr,
-            "istiwa_end": _add_minutes(dhuhr, 20),
-            "ghurub_start": _add_minutes(maghrib, -20),
+            "istiwa_start": _add_minutes(dhuhr, -10),
+            "istiwa_end": dhuhr,
+            "ghurub_start": _add_minutes(maghrib, -15),
             "ghurub_end": maghrib,
         }
 
