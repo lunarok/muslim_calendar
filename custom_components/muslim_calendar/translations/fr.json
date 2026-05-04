@@ -9,6 +9,8 @@
           "lat": "Latitude (si personnalisee)",
           "lon": "Longitude (si personnalisee)",
           "method": "Methode de calcul",
+          "fajr_angle": "Angle Fajr (custom)",
+          "isha_angle": "Angle Isha (custom)",
           "adjust_fajr": "Ajustement Fajr (minutes)",
           "adjust_dhuhr": "Ajustement Dhuhr (minutes)",
           "adjust_asr": "Ajustement Asr (minutes)",
@@ -21,7 +23,7 @@
           "iqamah_isha": "Iqamah Isha (minutes)"
         },
         "data_description": {
-          "location": "Selectionnez une ville predefinie ou personnalisee",
+          "location": "Selectionnez zone.home ou un device tracker",
           "lat": "Necessaire uniquement si localisation personnalisee",
           "lon": "Necessaire uniquement si localisation personnalisee",
           "method": "Methode de calcul des heures de priere"
@@ -43,6 +45,8 @@
           "lat": "Latitude",
           "lon": "Longitude",
           "method": "Methode de calcul",
+          "fajr_angle": "Angle Fajr (custom)",
+          "isha_angle": "Angle Isha (custom)",
           "adjust_fajr": "Ajustement Fajr",
           "adjust_dhuhr": "Ajustement Dhuhr",
           "adjust_asr": "Ajustement Asr",

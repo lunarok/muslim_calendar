@@ -107,8 +107,11 @@ class MuslimCalendarConfigFlow(ConfigFlow, domain=DOMAIN):
                     "ghurub_offset": int(user_input.get("ghurub_offset", 15)),
                 }
                 if method == "custom":
-                    data["fajr_angle"] = float(user_input.get("fajr_angle", 18.0))
-                    data["isha_angle"] = float(user_input.get("isha_angle", 18.0))
+                    try:
+                        data["fajr_angle"] = float(user_input.get("fajr_angle", 18.0))
+                        data["isha_angle"] = float(user_input.get("isha_angle", 18.0))
+                    except (TypeError, ValueError):
+                        errors["base"] = "invalid_angle"
                 loc_name = locations.get(location, {}).get("name", location)
                 return self.async_create_entry(title=f"Muslim Calendar ({loc_name})", data=data)
 
@@ -119,6 +122,8 @@ class MuslimCalendarConfigFlow(ConfigFlow, domain=DOMAIN):
             vol.Required("method", default="makkah"): vol.In(list(CALC_METHODS.keys())),
             vol.Optional("lat", default=str(DEFAULT_LAT)): str,
             vol.Optional("lon", default=str(DEFAULT_LON)): str,
+            vol.Optional("fajr_angle", default="18.0"): str,
+            vol.Optional("isha_angle", default="18.0"): str,
             vol.Optional("adjust_fajr", default=0): int,
             vol.Optional("adjust_dhuhr", default=0): int,
             vol.Optional("adjust_asr", default=0): int,
@@ -198,8 +203,13 @@ class MuslimCalendarOptionsFlow(OptionsFlow):
                 "ghurub_offset": int(user_input.get("ghurub_offset", config.get("ghurub_offset", 15))),
             }
             if method == "custom":
-                data["fajr_angle"] = float(user_input.get("fajr_angle", config.get("fajr_angle", 18.0)))
-                data["isha_angle"] = float(user_input.get("isha_angle", config.get("isha_angle", 18.0)))
+                try:
+                    data["fajr_angle"] = float(user_input.get("fajr_angle", config.get("fajr_angle", 18.0)))
+                    data["isha_angle"] = float(user_input.get("isha_angle", config.get("isha_angle", 18.0)))
+                except (TypeError, ValueError):
+                    errors["base"] = "invalid_angle"
+            if errors:
+                return self.async_show_form(step_id="init", data_schema=vol.Schema(schema_dict), errors=errors)
             return self.async_create_entry(title="", data=data)
 
         schema_dict = {
@@ -207,6 +217,8 @@ class MuslimCalendarOptionsFlow(OptionsFlow):
             vol.Required("method", default=config.get("method", "makkah")): vol.In(list(CALC_METHODS.keys())),
             vol.Optional("lat", default=str(config.get("lat", DEFAULT_LAT))): str,
             vol.Optional("lon", default=str(config.get("lon", DEFAULT_LON))): str,
+            vol.Optional("fajr_angle", default=str(config.get("fajr_angle", 18.0))): str,
+            vol.Optional("isha_angle", default=str(config.get("isha_angle", 18.0))): str,
             vol.Optional("adjust_fajr", default=config.get("adjust_fajr", 0)): int,
             vol.Optional("adjust_dhuhr", default=config.get("adjust_dhuhr", 0)): int,
             vol.Optional("adjust_asr", default=config.get("adjust_asr", 0)): int,
