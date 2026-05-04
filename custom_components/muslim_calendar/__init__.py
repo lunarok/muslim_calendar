@@ -160,6 +160,18 @@ class MuslimCalendarDataUpdateCoordinator(DataUpdateCoordinator):
         tomorrow_fajr = tomorrow_prayer_times.get("fajr", INVALID_TIME) if tomorrow_prayer_times else INVALID_TIME
         tomorrow_imsak = _add_minutes(tomorrow_fajr, -10)
 
+        # Tomorrow's 5 mandatory prayers
+        tomorrow_prayers = {
+            "fajr": tomorrow_prayer_times.get("fajr", INVALID_TIME),
+            "dhuhr": tomorrow_prayer_times.get("dhuhr", INVALID_TIME),
+            "asr": tomorrow_prayer_times.get("asr", INVALID_TIME),
+            "maghrib": tomorrow_prayer_times.get("maghrib", INVALID_TIME),
+            "isha": tomorrow_prayer_times.get("isha", INVALID_TIME),
+        }
+
+        # Next prayer time
+        next_prayer = _get_next_prayer(prayer_times, tomorrow_prayer_times)
+
         return {
             "prayer_times": prayer_times,
             "iqamah_times": iqamah_times,

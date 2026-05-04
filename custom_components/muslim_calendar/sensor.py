@@ -387,11 +387,11 @@ class MuslimCalendarTomorrowPrayersSensor(MuslimCalendarSensor):
             return {}
         tp = data.get("tomorrow_prayers", {})
         return {
-            "fajr": tp.get("fajr", ""),
-            "dhuhr": tp.get("dhuhr", ""),
-            "asr": tp.get("asr", ""),
-            "maghrib": tp.get("maghrib", ""),
-            "isha": tp.get("isha", ""),
+            "Fajr": tp.get("fajr", ""),
+            "Dhuhr": tp.get("dhuhr", ""),
+            "Asr": tp.get("asr", ""),
+            "Maghrib": tp.get("maghrib", ""),
+            "Isha": tp.get("isha", ""),
         }
 
 
