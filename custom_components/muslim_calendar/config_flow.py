@@ -121,11 +121,11 @@ class MuslimCalendarConfigFlow(ConfigFlow, domain=DOMAIN):
             vol.Optional("adjust_asr", default=0): int,
             vol.Optional("adjust_maghrib", default=0): int,
             vol.Optional("adjust_isha", default=0): int,
-            vol.Optional("iqamah_fajr", default=20): int,
-            vol.Optional("iqamah_dhuhr", default=15): int,
-            vol.Optional("iqamah_asr", default=15): int,
-            vol.Optional("iqamah_maghrib", default=10): int,
-            vol.Optional("iqamah_isha", default=15): int,
+            vol.Optional("iqamah_fajr", default=10): int,
+            vol.Optional("iqamah_dhuhr", default=10): int,
+            vol.Optional("iqamah_asr", default=10): int,
+            vol.Optional("iqamah_maghrib", default=5): int,
+            vol.Optional("iqamah_isha", default=5): int,
         })
 
         return self.async_show_form(
@@ -213,11 +213,11 @@ class MuslimCalendarOptionsFlow(OptionsFlow):
             vol.Optional("adjust_asr", default=config.get("adjust_asr", 0)): int,
             vol.Optional("adjust_maghrib", default=config.get("adjust_maghrib", 0)): int,
             vol.Optional("adjust_isha", default=config.get("adjust_isha", 0)): int,
-            vol.Optional("iqamah_fajr", default=config.get("iqamah_fajr", 20)): int,
-            vol.Optional("iqamah_dhuhr", default=config.get("iqamah_dhuhr", 15)): int,
-            vol.Optional("iqamah_asr", default=config.get("iqamah_asr", 15)): int,
-            vol.Optional("iqamah_maghrib", default=config.get("iqamah_maghrib", 10)): int,
-            vol.Optional("iqamah_isha", default=config.get("iqamah_isha", 15)): int,
+            vol.Optional("iqamah_fajr", default=config.get("iqamah_fajr", 10)): int,
+            vol.Optional("iqamah_dhuhr", default=config.get("iqamah_dhuhr", 10)): int,
+            vol.Optional("iqamah_asr", default=config.get("iqamah_asr", 10)): int,
+            vol.Optional("iqamah_maghrib", default=config.get("iqamah_maghrib", 5)): int,
+            vol.Optional("iqamah_isha", default=config.get("iqamah_isha", 5)): int,
         })
 
         return self.async_show_form(step_id="init", data_schema=schema, errors=errors)
