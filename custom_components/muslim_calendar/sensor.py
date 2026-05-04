@@ -369,7 +369,7 @@ class MuslimCalendarTomorrowPrayersSensor(MuslimCalendarSensor):
             coordinator=coordinator,
             unique_id_suffix="tomorrow_prayers",
             name="Tomorrow Prayers",
-            icon="mdi:calendar tomorrow",
+            icon="mdi:clock-alert-outline",
         )
 
     @property
