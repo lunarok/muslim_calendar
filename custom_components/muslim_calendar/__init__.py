@@ -147,8 +147,14 @@ class MuslimCalendarDataUpdateCoordinator(DataUpdateCoordinator):
         # Calendrier iCal pour Home Assistant Calendar
         calendar_ical = _build_icalendar(next_event, all_events, month_starts)
 
+        # Tomorrow's prayer times (needed for next prayer calculation and tomorrow imsak)
+        tomorrow_prayer_times = await self.hass.async_add_executor_job(
+            _calculate_prayer_times, lat, lon, calc_method, adjustments,
+            today + timedelta(days=1)
+        )
+
         # Next prayer time
-        next_prayer = _get_next_prayer(prayer_times)
+        next_prayer = _get_next_prayer(prayer_times, tomorrow_prayer_times)
 
         # Tomorrow's Imsak (Fajr of next day - 10 min)
         tomorrow_fajr = tomorrow_prayer_times.get("fajr", INVALID_TIME) if tomorrow_prayer_times else INVALID_TIME
@@ -173,10 +179,7 @@ class MuslimCalendarDataUpdateCoordinator(DataUpdateCoordinator):
             "event_by_type": event_by_type,
             "next_prayer": next_prayer,
             "tomorrow_imsak": tomorrow_imsak,
-            "tomorrow_prayer_times": await self.hass.async_add_executor_job(
-                _calculate_prayer_times, lat, lon, calc_method, adjustments,
-                today + timedelta(days=1)
-            ),
+            "tomorrow_prayer_times": tomorrow_prayer_times,
         }
 
 
@@ -409,7 +412,7 @@ def _build_icalendar(next_event, all_events, month_starts) -> str:
     return "\r\n".join(lines)
 
 
-def _get_next_prayer(prayer_times: Dict[str, str]) -> Dict:
+def _get_next_prayer(prayer_times: Dict[str, str], tomorrow_prayer_times: Dict = None) -> Dict:
     """Returns the next prayer name and time, plus time remaining."""
     now = datetime.now()
     now_min = now.hour * 60 + now.minute
