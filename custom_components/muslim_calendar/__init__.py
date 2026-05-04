@@ -3,7 +3,7 @@ Muslim Calendar - Integration Home Assistant for Islamic prayer times and Hijri 
 """
 
 import logging
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import Dict
 
 from homeassistant.config_entries import ConfigEntry
@@ -255,45 +255,58 @@ def _calculate_prayer_times(
     fajr_angle: float = None, isha_angle: float = None
 ) -> Dict[str, str]:
     try:
-        import python_adhan
-        from python_adhan import AdhanCalculator
+        from datetime import datetime
+        from zoneinfo import ZoneInfo
+        from adhanpy import PrayerTimes as AdhanPrayerTimes
+        from adhanpy.calculation.CalculationMethod import CalculationMethod
+        from adhanpy.calculation.CalculationParameters import CalculationParameters
+
         method_map = {
-            "isna": python_adhan.CalculationMethod.ISNA,
-            "mwl": python_adhan.CalculationMethod.MWL,
-            "makkah": python_adhan.CalculationMethod.MAKKAH,
-            "egypt": python_adhan.CalculationMethod.EGYPT,
-            "karachi": python_adhan.CalculationMethod.KARACHI,
-            "koc": python_adhan.CalculationMethod.KOC,
-            "kuwait": python_adhan.CalculationMethod.KUWAIT,
-            "qatar": python_adhan.CalculationMethod.QATAR,
-            "singapore": python_adhan.CalculationMethod.SINGAPORE,
-            "france": python_adhan.CalculationMethod.FRANCE,
-            "turkey": python_adhan.CalculationMethod.TURKEY,
-            "jafari": python_adhan.CalculationMethod.JAFARI,
-            "london": python_adhan.CalculationMethod.LONDON,
-            "dubai": python_adhan.CalculationMethod.DUBAI,
+            "isna": CalculationMethod.NORTH_AMERICA,
+            "mwl": CalculationMethod.MUSLIM_WORLD_LEAGUE,
+            "makkah": CalculationMethod.UMM_AL_QURA,
+            "egypt": CalculationMethod.EGYPTIAN,
+            "karachi": CalculationMethod.KARACHI,
+            "koc": CalculationMethod.KUWAIT,
+            "kuwait": CalculationMethod.KUWAIT,
+            "qatar": CalculationMethod.QATAR,
+            "singapore": CalculationMethod.SINGAPORE,
+            "france": CalculationMethod.UOIF,
+            "turkey": CalculationMethod.NONE,
+            "jafari": CalculationMethod.NONE,
+            "london": CalculationMethod.NORTH_AMERICA,
+            "dubai": CalculationMethod.DUBAI,
         }
+
         if calc_method == "custom" and fajr_angle is not None and isha_angle is not None:
-            adhan_method = python_adhan.CalculationMethod.MAKKAH
-            result = AdhanCalculator.get_adhan(
-                adhan_method, lat, lon, str(target_date),
-                fajr_angle=fajr_angle, isha_angle=isha_angle
-            )
+            params = CalculationParameters(fajr_angle=fajr_angle, isha_angle=isha_angle)
+            pt = AdhanPrayerTimes((lat, lon), datetime.combine(target_date, datetime.min.time()), calculation_parameters=params)
         else:
-            adhan_method = method_map.get(calc_method, python_adhan.CalculationMethod.MAKKAH)
-            result = AdhanCalculator.get_adhan(adhan_method, lat, lon, str(target_date))
+            method = method_map.get(calc_method, CalculationMethod.UMM_AL_QURA)
+            pt = AdhanPrayerTimes((lat, lon), datetime.combine(target_date, datetime.min.time()), calculation_method=method)
+
+        def dt_to_str(dt):
+            if dt is None:
+                return INVALID_TIME
+            return dt.strftime("%H:%M")
+
+        def apply_adj(time_str, adj):
+            if time_str == INVALID_TIME:
+                return INVALID_TIME
+            return _add_minutes(time_str, adj)
+
+        result = {
+            "fajr": apply_adj(dt_to_str(pt.fajr), adjustments.get("Fajr", 0)),
+            "shuruq": dt_to_str(pt.sunrise),
+            "dhuhr": apply_adj(dt_to_str(pt.dhuhr), adjustments.get("Dhuhr", 0)),
+            "asr": apply_adj(dt_to_str(pt.asr), adjustments.get("Asr", 0)),
+            "maghrib": apply_adj(dt_to_str(pt.maghrib), adjustments.get("Maghrib", 0)),
+            "isha": apply_adj(dt_to_str(pt.isha), adjustments.get("Isha", 0)),
+        }
+        return result
     except Exception as e:
         _LOGGER.error(f"Prayer times calculation failed: {e}")
         return {}
-    output = {}
-    for prayer in ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha", "Midnight"]:
-        time_str = result.get(prayer, INVALID_TIME)
-        if time_str:
-            output[prayer.lower()] = _add_minutes(time_str, adjustments.get(prayer, 0))
-        else:
-            output[prayer.lower()] = INVALID_TIME
-    output["shuruq"] = result.get("Sunrise", INVALID_TIME)
-    return output
 
 
 def _calculate_iqamah(prayer_times: Dict, offsets: Dict) -> Dict[str, str]:

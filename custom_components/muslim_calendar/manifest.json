@@ -1,9 +1,9 @@
 {
   "name": "Muslim Calendar",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "Islamic prayer times and Hijri calendar for Home Assistant. 100% local calculation, 15 methods, native calendar.",
   "icon": "mdi:mosque-outline",
-  "requirements": ["hijridate>=2.3.0", "python-adhan>=1.0.0"],
+  "requirements": ["hijridate>=2.3.0", "adhanpy>=1.0.0"],
   "domain": "muslim_calendar",
   "config_flow": true,
   "iot_class": "local_polling"

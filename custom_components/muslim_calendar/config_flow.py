@@ -146,7 +146,7 @@ class MuslimCalendarConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
     @staticmethod
-    async def async_get_options_flow(config_entry):
+    def async_get_options_flow(config_entry):
         return MuslimCalendarOptionsFlow(config_entry)
 
 
