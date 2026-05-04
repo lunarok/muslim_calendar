@@ -153,7 +153,7 @@ class MuslimCalendarOptionsFlow(OptionsFlow):
         locations = await get_location_options(self.hass)
         loc_choices = {k: v["name"] for k, v in locations.items()}
         if current_loc not in loc_choices:
-            loc_choices["custom"] = "Personnalisee (coordonnees)"
+            loc_choices["custom"] = "Custom (lat/lon)"
 
         if user_input is not None:
             method = user_input.get("method", config.get("method", "isna"))
