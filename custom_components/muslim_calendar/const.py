@@ -10,14 +10,8 @@ DEVICE_MODEL = "Islamic Prayer Times"
 DEFAULT_LOCATION = {"name": "Maison (zone.home)", "lat": 47.4, "lon": -0.64}
 
 CALC_METHODS = {
-    "isna": "Islamic Society of North America",
-    "mwl": "Muslim World League",
-    "karachi": "University of Islamic Sciences, Karachi",
+    "isna": "Islamic Society of North America (ISNA)",
     "makkah": "Umm al-Qura University, Makkah",
-    "egypt": "Egyptian General Authority of Survey",
-    "tehran": "Institute of Geophysics, University of Tehran",
-    "jafari": "Jafari",
-    "france": "France (UOIF)",
 }
 
 HIJRI_MONTHS_FR = {
