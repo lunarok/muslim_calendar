@@ -147,6 +147,13 @@ class MuslimCalendarDataUpdateCoordinator(DataUpdateCoordinator):
         # Calendrier iCal pour Home Assistant Calendar
         calendar_ical = _build_icalendar(next_event, all_events, month_starts)
 
+        # Next prayer time
+        next_prayer = _get_next_prayer(prayer_times)
+
+        # Tomorrow's Imsak (Fajr of next day - 10 min)
+        tomorrow_fajr = tomorrow_prayer_times.get("fajr", INVALID_TIME) if tomorrow_prayer_times else INVALID_TIME
+        tomorrow_imsak = _add_minutes(tomorrow_fajr, -10)
+
         return {
             "prayer_times": prayer_times,
             "iqamah_times": iqamah_times,
@@ -164,6 +171,8 @@ class MuslimCalendarDataUpdateCoordinator(DataUpdateCoordinator):
             "all_events": all_events,
             "next_event": next_event,
             "event_by_type": event_by_type,
+            "next_prayer": next_prayer,
+            "tomorrow_imsak": tomorrow_imsak,
             "tomorrow_prayer_times": await self.hass.async_add_executor_job(
                 _calculate_prayer_times, lat, lon, calc_method, adjustments,
                 today + timedelta(days=1)
@@ -398,3 +407,53 @@ def _build_icalendar(next_event, all_events, month_starts) -> str:
 
     lines.append("END:VCALENDAR")
     return "\r\n".join(lines)
+
+
+def _get_next_prayer(prayer_times: Dict[str, str]) -> Dict:
+    """Returns the next prayer name and time, plus time remaining."""
+    now = datetime.now()
+    now_min = now.hour * 60 + now.minute
+
+    prayers_order = ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"]
+    prayer_time_keys = ["fajr", "dhuhr", "asr", "maghrib", "isha"]
+
+    next_prayer_name = None
+    next_prayer_time = None
+    next_prayer_key = None
+
+    for i, key in enumerate(prayer_time_keys):
+        time_str = prayer_times.get(key, INVALID_TIME)
+        if time_str == INVALID_TIME:
+            continue
+        prayer_min = _time_to_minutes(time_str)
+        if prayer_min > now_min:
+            next_prayer_name = prayers_order[i]
+            next_prayer_time = time_str
+            next_prayer_key = key
+            break
+
+    # If no prayer found today, it's Isha was before now (tomorrow's Fajr)
+    if next_prayer_name is None:
+        next_prayer_name = "Fajr"
+        next_prayer_key = "fajr"
+        next_prayer_time = prayer_times.get("fajr", INVALID_TIME)
+        # Time remaining is until tomorrow's Fajr (already calculated as tomorrow_imsak + 10)
+
+    # Calculate minutes until next prayer
+    if next_prayer_time != INVALID_TIME:
+        next_min = _time_to_minutes(next_prayer_time)
+        if next_min <= now_min:
+            # Tomorrow - add 24h worth of minutes
+            minutes_until = (24 * 60 - now_min) + next_min
+        else:
+            minutes_until = next_min - now_min
+    else:
+        minutes_until = 0
+
+    return {
+        "name": next_prayer_name,
+        "key": next_prayer_key,
+        "time": next_prayer_time,
+        "minutes_until": minutes_until,
+        "iqamah": _add_minutes(next_prayer_time, 15) if next_prayer_time != INVALID_TIME else INVALID_TIME,
+    }

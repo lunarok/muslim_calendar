@@ -25,12 +25,13 @@ PRAYER_SENSORS = [
     ("prayer_times/isha", "Isha", "mdi:weather-night"),
 ]
 
-IQAMAH_SENSORS = [
-    ("iqamah_times", "Iqamah Fajr", "mdi:clock-check-outline"),
-    ("iqamah_times", "Iqamah Dhuhr", "mdi:clock-check-outline"),
-    ("iqamah_times", "Iqamah Asr", "mdi:clock-check-outline"),
-    ("iqamah_times", "Iqamah Maghrib", "mdi:clock-check-outline"),
-    ("iqamah_times", "Iqamah Isha", "mdi:clock-check-outline"),
+# Iqamah (defined here but created in setup with separate keys)
+IQAMAH_DEFS = [
+    ("Iqamah Fajr", "fajr"),
+    ("Iqamah Dhuhr", "dhuhr"),
+    ("Iqamah Asr", "asr"),
+    ("Iqamah Maghrib", "maghrib"),
+    ("Iqamah Isha", "isha"),
 ]
 
 
@@ -273,6 +274,90 @@ class MuslimCalendarForbiddenSensor(MuslimCalendarSensor):
 
 
 # =============================================================================
+# NEXT PRAYER SENSOR
+# =============================================================================
+
+class MuslimCalendarNextPrayerSensor(MuslimCalendarSensor):
+    """Next prayer name, time, and minutes until."""
+
+    def __init__(self, coordinator):
+        super().__init__(
+            coordinator=coordinator,
+            unique_id_suffix="next_prayer",
+            name="Next Prayer",
+            icon="mdi:clock-next",
+        )
+
+    @property
+    def state(self):
+        data = self.coordinator.data
+        if not data:
+            return "Unknown"
+        next_p = data.get("next_prayer", {})
+        return next_p.get("name", "Unknown")
+
+    @property
+    def extra_state_attributes(self):
+        data = self.coordinator.data
+        if not data:
+            return {}
+        next_p = data.get("next_prayer", {})
+        return {
+            "next_prayer_name": next_p.get("name", ""),
+            "next_prayer_time": next_p.get("time", ""),
+            "next_prayer_minutes_until": next_p.get("minutes_until", 0),
+            "next_prayer_iqamah": next_p.get("iqamah", ""),
+        }
+
+
+# =============================================================================
+# NEXT PRAYER TIME SENSOR
+# =============================================================================
+
+class MuslimCalendarNextPrayerTimeSensor(MuslimCalendarSensor):
+    """Time of next prayer (state = time string)."""
+
+    def __init__(self, coordinator):
+        super().__init__(
+            coordinator=coordinator,
+            unique_id_suffix="next_prayer_time",
+            name="Next Prayer Time",
+            icon="mdi:clock-outline",
+        )
+
+    @property
+    def state(self):
+        data = self.coordinator.data
+        if not data:
+            return "Unknown"
+        next_p = data.get("next_prayer", {})
+        return next_p.get("time", "Unknown")
+
+
+# =============================================================================
+# TOMORROW IMSAK SENSOR
+# =============================================================================
+
+class MuslimCalendarTomorrowImsakSensor(MuslimCalendarSensor):
+    """Tomorrow's Imsak time (Fajr of next day - 10 min)."""
+
+    def __init__(self, coordinator):
+        super().__init__(
+            coordinator=coordinator,
+            unique_id_suffix="tomorrow_imsak",
+            name="Tomorrow Imsak",
+            icon="mdi:clock-alert-outline",
+        )
+
+    @property
+    def state(self):
+        data = self.coordinator.data
+        if not data:
+            return "Unknown"
+        return data.get("tomorrow_imsak", "Unknown")
+
+
+# =============================================================================
 # PLATFORM SETUP
 # =============================================================================
 
@@ -306,6 +391,15 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
     # Tahajjud
     entities.append(MuslimCalendarTahajudSensor(coordinator))
+
+    # Next Prayer
+    entities.append(MuslimCalendarNextPrayerSensor(coordinator))
+
+    # Next Prayer Time
+    entities.append(MuslimCalendarNextPrayerTimeSensor(coordinator))
+
+    # Tomorrow Imsak
+    entities.append(MuslimCalendarTomorrowImsakSensor(coordinator))
 
     # Hijri Date
     entities.append(MuslimCalendarDateSensor(coordinator))
