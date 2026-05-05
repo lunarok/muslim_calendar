@@ -77,11 +77,15 @@ class MuslimCalendarSensor(Entity):
         value = self._get_nested(data, self._key_path)
         if value is None:
             return "Unknown"
-        # Convert "HH:MM" to "YYYY-MM-DD HH:MM:00" for time trigger compatibility
+        # Convert "HH:MM" to ISO timestamp with timezone offset for time trigger compatibility
         if isinstance(value, str) and len(value) == 5 and value[2] == ":":
-            from datetime import date, datetime
-            today = date.today().isoformat()
-            return f"{today} {value}:00"
+            from datetime import datetime
+            from zoneinfo import ZoneInfo
+            tz_name = str(self.coordinator.hass.config.time_zone) if self.coordinator.hass.config.time_zone else "UTC"
+            tz = ZoneInfo(tz_name)
+            today = datetime.now(tz).date().isoformat()
+            dt = datetime.strptime(f"{today} {value}", "%Y-%m-%d %H:%M").replace(tzinfo=tz)
+            return dt.isoformat()
         return value
 
     async def async_update(self):
@@ -103,6 +107,7 @@ class MuslimCalendarImsakSensor(MuslimCalendarSensor):
             icon="mdi:clock-alert-outline",
             key_path="special/imsak",
         )
+        self._attr_device_class = "timestamp"
 
 
 # =============================================================================
@@ -120,6 +125,7 @@ class MuslimCalendarTahajudSensor(MuslimCalendarSensor):
             icon="mdi:weather-night",
             key_path="special/tahajud",
         )
+        self._attr_device_class = "timestamp"
 
 
 # =============================================================================
@@ -397,6 +403,7 @@ class MuslimCalendarTomorrowImsakSensor(MuslimCalendarSensor):
             name="Tomorrow Imsak",
             icon="mdi:clock-alert-outline",
         )
+        self._attr_device_class = "timestamp"
 
     @property
     def state(self):
@@ -405,8 +412,13 @@ class MuslimCalendarTomorrowImsakSensor(MuslimCalendarSensor):
             return "Unknown"
         val = data.get("tomorrow_imsak", "Unknown")
         if isinstance(val, str) and len(val) == 5 and val[2] == ":":
-            from datetime import date
-            return f"{date.today().isoformat()} {val}:00"
+            from datetime import datetime
+            from zoneinfo import ZoneInfo
+            tz_name = str(self.coordinator.hass.config.time_zone) if self.coordinator.hass.config.time_zone else "UTC"
+            tz = ZoneInfo(tz_name)
+            tomorrow = (datetime.now(tz).date()).isoformat()
+            dt = datetime.strptime(f"{tomorrow} {val}", "%Y-%m-%d %H:%M").replace(tzinfo=tz)
+            return dt.isoformat()
         return val
 
 
@@ -424,6 +436,7 @@ class MuslimCalendarTomorrowPrayersSensor(MuslimCalendarSensor):
             name="Tomorrow Prayers",
             icon="mdi:clock-alert-outline",
         )
+        self._attr_device_class = "timestamp"
 
     @property
     def state(self):
@@ -433,8 +446,13 @@ class MuslimCalendarTomorrowPrayersSensor(MuslimCalendarSensor):
         tp = data.get("tomorrow_prayers", {})
         fajr = tp.get("fajr", "Unknown")
         if isinstance(fajr, str) and len(fajr) == 5 and fajr[2] == ":":
-            from datetime import date
-            return f"{date.today().isoformat()} {fajr}:00"
+            from datetime import datetime
+            from zoneinfo import ZoneInfo
+            tz_name = str(self.coordinator.hass.config.time_zone) if self.coordinator.hass.config.time_zone else "UTC"
+            tz = ZoneInfo(tz_name)
+            tomorrow = (datetime.now(tz).date()).isoformat()
+            dt = datetime.strptime(f"{tomorrow} {fajr}", "%Y-%m-%d %H:%M").replace(tzinfo=tz)
+            return dt.isoformat()
         return fajr
 
     @property
@@ -445,9 +463,14 @@ class MuslimCalendarTomorrowPrayersSensor(MuslimCalendarSensor):
         tp = data.get("tomorrow_prayers", {})
         def fmt(v):
             if isinstance(v, str) and len(v) == 5 and v[2] == ":":
-                return f"{date.today().isoformat()} {v}:00"
+                from datetime import datetime
+                from zoneinfo import ZoneInfo
+                tz_name = str(self.coordinator.hass.config.time_zone) if self.coordinator.hass.config.time_zone else "UTC"
+                tz = ZoneInfo(tz_name)
+                tomorrow = (datetime.now(tz).date()).isoformat()
+                dt = datetime.strptime(f"{tomorrow} {v}", "%Y-%m-%d %H:%M").replace(tzinfo=tz)
+                return dt.isoformat()
             return v or ""
-        from datetime import date
         return {
             "Fajr": fmt(tp.get("fajr", "")),
             "Dhuhr": fmt(tp.get("dhuhr", "")),
@@ -465,12 +488,14 @@ async def async_setup_entry(hass, entry, async_add_entities):
     coordinator = hass.data[DOMAIN][entry.entry_id]
     entities = []
 
-    # Prayer times (6, no Midnight)
+    # Prayer times (6, no Midnight) — device_class: timestamp
     for idx, (key_path, name, icon) in enumerate(PRAYER_SENSORS):
         suffix = key_path.replace("/", "_")
-        entities.append(MuslimCalendarSensor(coordinator, f"prayer_{idx}_{suffix}", name, icon, key_path))
+        sensor = MuslimCalendarSensor(coordinator, f"prayer_{idx}_{suffix}", name, icon, key_path)
+        sensor._attr_device_class = "timestamp"
+        entities.append(sensor)
 
-    # Iqamah (5 separate entities, all under iqamah_times key path)
+    # Iqamah (5 separate entities) — device_class: timestamp
     for idx, (name, suffix) in enumerate([
         ("Iqamah Fajr", "fajr"),
         ("Iqamah Dhuhr", "dhuhr"),
@@ -478,13 +503,15 @@ async def async_setup_entry(hass, entry, async_add_entities):
         ("Iqamah Maghrib", "maghrib"),
         ("Iqamah Isha", "isha"),
     ]):
-        entities.append(MuslimCalendarSensor(
+        sensor = MuslimCalendarSensor(
             coordinator,
             f"iqamah_{idx}_{suffix}",
             name,
             "mdi:clock-check-outline",
             f"iqamah_times/iqamah_{suffix}",
-        ))
+        )
+        sensor._attr_device_class = "timestamp"
+        entities.append(sensor)
 
     # Imsak
     entities.append(MuslimCalendarImsakSensor(coordinator))
