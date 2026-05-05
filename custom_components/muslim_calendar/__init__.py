@@ -362,6 +362,17 @@ def _find_events(start_date, count: int = 365) -> list:
                 }
                 events.append(ev)
                 found += 1
+            # 10 Most Blessed Days (Dhu al-Hijjah 1-10)
+            if h.month == 12 and 1 <= h.day <= 10:
+                ev = {
+                    "name": "10 Most Blessed Days",
+                    "arabic": "العشر ذي الحجة",
+                    "date": current.isoformat(),
+                    "gregorian": current.strftime("%Y-%m-%d"),
+                    "hijri": f"{h.day:02d}-{h.month:02d}-{h.year}",
+                }
+                events.append(ev)
+                found += 1
             prev_month = h.month
             current += timedelta(days=1)
         except Exception:

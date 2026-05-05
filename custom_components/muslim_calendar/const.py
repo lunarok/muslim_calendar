@@ -49,7 +49,7 @@ ISLAMIC_EVENTS = {
     (9, 21): {"name": "Last 10 Nights of Ramadan", "arabic": "العشر الأواخر من رمضان"},
     (9, 27): {"name": "Laylat al-Qadr", "arabic": "ليلة القدر"},
     (10, 1): {"name": "Eid al-Fitr", "arabic": "عيد الفطر"},
-    (12, 1): {"name": "10 Most Blessed Days", "arabic": "العشر ذي الحجة"},
+    (12, 1): {"name": "Dhu al-Hijjah 1", "arabic": "أول ذي الحجة"},
     (12, 9): {"name": "Day of Arafat", "arabic": "يوم عرفة"},
     (12, 10): {"name": "Eid al-Adha", "arabic": "عيد الأضحى"},
 }
