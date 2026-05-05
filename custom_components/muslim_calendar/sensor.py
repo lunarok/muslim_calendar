@@ -159,6 +159,48 @@ class MuslimCalendarDateSensor(MuslimCalendarSensor):
 
 
 # =============================================================================
+# TOMORROW HIJRI DATE SENSOR
+# =============================================================================
+
+class MuslimCalendarTomorrowHijriSensor(MuslimCalendarSensor):
+    """Tomorrow's Hijri date sensor with 5 attributes."""
+
+    def __init__(self, coordinator):
+        super().__init__(
+            coordinator=coordinator,
+            unique_id_suffix="tomorrow_hijri_date",
+            name="Tomorrow Hijri Date",
+            icon="mdi:calendar",
+        )
+
+    @property
+    def state(self):
+        data = self.coordinator.data
+        if not data:
+            return "Unknown"
+        hijri = data.get("tomorrow_hijri_info", {})
+        if not hijri:
+            return "Unknown"
+        month_name = HIJRI_MONTHS_EN.get(hijri.get("month", 0), "?")
+        return f"{hijri.get('day', 0)} {month_name} {hijri.get('year', 0)}"
+
+    @property
+    def extra_state_attributes(self):
+        data = self.coordinator.data
+        if not data:
+            return {}
+        hijri = data.get("tomorrow_hijri_info", {})
+        month_name = HIJRI_MONTHS_EN.get(hijri.get("month", 0), "?")
+        return {
+            "hijri_day": hijri.get("day", 0),
+            "hijri_month": hijri.get("month", 0),
+            "hijri_month_full": month_name,
+            "hijri_year": hijri.get("year", 0),
+            "hijri_date_full": f"{hijri.get('day', 0)} {month_name} {hijri.get('year', 0)}",
+        }
+
+
+# =============================================================================
 # NEXT MONTHS SENSOR
 # =============================================================================
 
@@ -444,6 +486,9 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
     # Hijri Date
     entities.append(MuslimCalendarDateSensor(coordinator))
+
+    # Tomorrow Hijri Date
+    entities.append(MuslimCalendarTomorrowHijriSensor(coordinator))
 
     # Next Months
     entities.append(MuslimCalendarNextMonthsSensor(coordinator))

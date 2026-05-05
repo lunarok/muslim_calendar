@@ -182,6 +182,7 @@ class MuslimCalendarDataUpdateCoordinator(DataUpdateCoordinator):
             "forbidden_slots": forbidden_slots,
             "hijri_date": hijri_info,
             "hijri_info": hijri_info,
+            "tomorrow_hijri_info": _get_hijri_info(today + timedelta(days=1)),
             "month_starts": month_starts,
             "next_month": next_month,
             "next_month_start": next_month.get("gregorian", "") if next_month else "",
