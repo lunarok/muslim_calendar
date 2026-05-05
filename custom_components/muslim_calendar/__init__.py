@@ -189,6 +189,7 @@ class MuslimCalendarDataUpdateCoordinator(DataUpdateCoordinator):
             "next_event": next_event,
             "event_by_type": event_by_type,
             "next_prayer": next_prayer,
+            "qibla_direction": calculate_qibla_direction(lat, lon),
             "tomorrow_imsak": tomorrow_imsak,
             "tomorrow_prayers": tomorrow_prayers,
             "tomorrow_prayer_times": tomorrow_prayer_times,
@@ -414,6 +415,20 @@ def _find_month_starts(start_date, count: int = 12) -> list:
         except Exception:
             current += timedelta(days=1)
     return starts
+
+
+def calculate_qibla_direction(lat: float, lon: float) -> float:
+    """Calculate Qibla direction from coordinates (degrees from North)."""
+    kaaba_lat = 21.4225
+    kaaba_lon = 39.8262
+    import math
+    lat1 = math.radians(lat)
+    lat2 = math.radians(kaaba_lat)
+    dlon = math.radians(kaaba_lon - lon)
+    x = math.sin(dlon) * math.cos(lat2)
+    y = math.cos(lat1) * math.sin(lat2) - math.sin(lat1) * math.cos(lat2) * math.cos(dlon)
+    bearing = math.degrees(math.atan2(x, y))
+    return (bearing + 360) % 360
 
 
 def _get_next_prayer(prayer_times: Dict[str, str], tomorrow_prayer_times: Dict = None) -> Dict:

@@ -454,4 +454,47 @@ async def async_setup_entry(hass, entry, async_add_entities):
     # Makruh Ibadah
     entities.append(MuslimCalendarForbiddenSensor(coordinator))
 
+    # Qibla direction
+    entities.append(MuslimCalendarQiblaSensor(coordinator))
+
     async_add_entities(entities, update_before_add=True)
+
+
+# =============================================================================
+# QIBLA DIRECTION SENSOR
+# =============================================================================
+
+class MuslimCalendarQiblaSensor(MuslimCalendarSensor):
+    """Qibla direction in degrees from North."""
+
+    def __init__(self, coordinator):
+        super().__init__(
+            coordinator=coordinator,
+            unique_id_suffix="qibla_direction",
+            name="Qibla Direction",
+            icon="mdi:compass",
+        )
+
+    @property
+    def state(self):
+        data = self.coordinator.data
+        if not data:
+            return "0"
+        return f"{data.get('qibla_direction', 0):.1f}"
+
+    @property
+    def extra_state_attributes(self):
+        data = self.coordinator.data
+        if not data:
+            return {}
+        direction = data.get("qibla_direction", 0)
+        return {
+            "qibla_degrees": round(direction, 1),
+            "qibla_cardinal": self._degrees_to_cardinal(direction),
+        }
+
+    def _degrees_to_cardinal(self, degrees: float) -> str:
+        directions = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
+                      "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"]
+        idx = round(degrees / 22.5) % 16
+        return directions[idx]
