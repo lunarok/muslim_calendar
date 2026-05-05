@@ -75,7 +75,14 @@ class MuslimCalendarSensor(Entity):
         if not data:
             return None
         value = self._get_nested(data, self._key_path)
-        return value if value is not None else "Unknown"
+        if value is None:
+            return "Unknown"
+        # Convert "HH:MM" to "YYYY-MM-DD HH:MM:00" for time trigger compatibility
+        if isinstance(value, str) and len(value) == 5 and value[2] == ":":
+            from datetime import date, datetime
+            today = date.today().isoformat()
+            return f"{today} {value}:00"
+        return value
 
     async def async_update(self):
         await self.coordinator.async_request_refresh()
@@ -396,7 +403,11 @@ class MuslimCalendarTomorrowImsakSensor(MuslimCalendarSensor):
         data = self.coordinator.data
         if not data:
             return "Unknown"
-        return data.get("tomorrow_imsak", "Unknown")
+        val = data.get("tomorrow_imsak", "Unknown")
+        if isinstance(val, str) and len(val) == 5 and val[2] == ":":
+            from datetime import date
+            return f"{date.today().isoformat()} {val}:00"
+        return val
 
 
 # =============================================================================
@@ -420,7 +431,11 @@ class MuslimCalendarTomorrowPrayersSensor(MuslimCalendarSensor):
         if not data:
             return "Unknown"
         tp = data.get("tomorrow_prayers", {})
-        return tp.get("fajr", "Unknown")
+        fajr = tp.get("fajr", "Unknown")
+        if isinstance(fajr, str) and len(fajr) == 5 and fajr[2] == ":":
+            from datetime import date
+            return f"{date.today().isoformat()} {fajr}:00"
+        return fajr
 
     @property
     def extra_state_attributes(self):
@@ -428,12 +443,17 @@ class MuslimCalendarTomorrowPrayersSensor(MuslimCalendarSensor):
         if not data:
             return {}
         tp = data.get("tomorrow_prayers", {})
+        def fmt(v):
+            if isinstance(v, str) and len(v) == 5 and v[2] == ":":
+                return f"{date.today().isoformat()} {v}:00"
+            return v or ""
+        from datetime import date
         return {
-            "Fajr": tp.get("fajr", ""),
-            "Dhuhr": tp.get("dhuhr", ""),
-            "Asr": tp.get("asr", ""),
-            "Maghrib": tp.get("maghrib", ""),
-            "Isha": tp.get("isha", ""),
+            "Fajr": fmt(tp.get("fajr", "")),
+            "Dhuhr": fmt(tp.get("dhuhr", "")),
+            "Asr": fmt(tp.get("asr", "")),
+            "Maghrib": fmt(tp.get("maghrib", "")),
+            "Isha": fmt(tp.get("isha", "")),
         }
 
 
