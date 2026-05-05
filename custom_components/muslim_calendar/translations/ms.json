@@ -1,0 +1,64 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Muslim Calendar",
+        "description": "Konfigurasikan integrasi Muslim Calendar untuk lokasi anda.",
+        "data": {
+          "location": "Lokasi",
+          "lat": "Latitud (jika tersuai)",
+          "lon": "Longitud (jika tersuai)",
+          "method": "Kaedah pengiraan",
+          "fajr_angle": "Sudut Fajr (tersuai)",
+          "isha_angle": "Sudut Isha (tersuai)",
+          "adjust_fajr": "Pelarasan Fajr (minit)",
+          "adjust_dhuhr": "Pelarasan Dhuhr (minit)",
+          "adjust_asr": "Pelarasan Asr (minit)",
+          "adjust_maghrib": "Pelarasan Maghrib (minit)",
+          "adjust_isha": "Pelarasan Isha (minit)",
+          "iqamah_fajr": "Iqamah Fajr (minit)",
+          "iqamah_dhuhr": "Iqamah Dhuhr (minit)",
+          "iqamah_asr": "Iqamah Asr (minit)",
+          "iqamah_maghrib": "Iqamah Maghrib (minit)",
+          "iqamah_isha": "Iqamah Isha (minit)"
+        },
+        "data_description": {
+          "location": "Pilih zone.home atau peranti penjejak",
+          "lat": "Diperlukan hanya untuk lokasi tersuai",
+          "lon": "Diperlukan hanya untuk lokasi tersuai",
+          "method": "Kaedah pengiraan waktu solat"
+        }
+      }
+    },
+    "error": {
+      "location_required": "Koordinat diperlukan untuk lokasi tersuai.",
+      "invalid_location": "Latitud atau longitud tidak sah."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Muslim Calendar - Pilihan",
+        "description": "Ubah parameter.",
+        "data": {
+          "location": "Lokasi",
+          "lat": "Latitud",
+          "lon": "Longitud",
+          "method": "Kaedah pengiraan",
+          "fajr_angle": "Sudut Fajr (tersuai)",
+          "isha_angle": "Sudut Isha (tersuai)",
+          "adjust_fajr": "Pelarasan Fajr",
+          "adjust_dhuhr": "Pelarasan Dhuhr",
+          "adjust_asr": "Pelarasan Asr",
+          "adjust_maghrib": "Pelarasan Maghrib",
+          "adjust_isha": "Pelarasan Isha",
+          "iqamah_fajr": "Iqamah Fajr",
+          "iqamah_dhuhr": "Iqamah Dhuhr",
+          "iqamah_asr": "Iqamah Asr",
+          "iqamah_maghrib": "Iqamah Maghrib",
+          "iqamah_isha": "Iqamah Isha"
+        }
+      }
+    }
+  }
+}

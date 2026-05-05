@@ -1,0 +1,64 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Mescit Takvimi",
+        "description": "Mescit Takvimi entegrasyonunu konumunuz icin yapilandirin.",
+        "data": {
+          "location": "Konum",
+          "lat": "Enlem (ozel konum ise)",
+          "lon": "Boylam (ozel konum ise)",
+          "method": "Hesaplama yontemi",
+          "fajr_angle": "Sabah (Fajr) acisi (ozel)",
+          "isha_angle": "Yatsi (Isha) acisi (ozel)",
+          "adjust_fajr": "Sabah duzeltmesi (dakika)",
+          "adjust_dhuhr": "Ogle duzeltmesi (dakika)",
+          "adjust_asr": "Ikindi duzeltmesi (dakika)",
+          "adjust_maghrib": "Aksam duzeltmesi (dakika)",
+          "adjust_isha": "Yatsi duzeltmesi (dakika)",
+          "iqamah_fajr": "Sabah vakti (dakika)",
+          "iqamah_dhuhr": "Ogle vakti (dakika)",
+          "iqamah_asr": "Ikindi vakti (dakika)",
+          "iqamah_maghrib": "Aksam vakti (dakika)",
+          "iqamah_isha": "Yatsi vakti (dakika)"
+        },
+        "data_description": {
+          "location": "zone.home veya bir cihaz takipcisini secin",
+          "lat": "Yalnizca ozellestirilmis konumlar icin gereklidir",
+          "lon": "Yalnizca ozellestirilmis konumlar icin gereklidir",
+          "method": "Namaz vakti hesaplama yontemi"
+        }
+      }
+    },
+    "error": {
+      "location_required": "Ozellestirilmis konum icin koordinatlar gereklidir.",
+      "invalid_location": "Enlem veya boylam gecersiz."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Mescit Takvimi - Secenekler",
+        "description": "Parametreleri degistirin.",
+        "data": {
+          "location": "Konum",
+          "lat": "Enlem",
+          "lon": "Boylam",
+          "method": "Hesaplama yontemi",
+          "fajr_angle": "Sabah (Fajr) acisi (ozel)",
+          "isha_angle": "Yatsi (Isha) acisi (ozel)",
+          "adjust_fajr": "Sabah duzeltmesi",
+          "adjust_dhuhr": "Ogle duzeltmesi",
+          "adjust_asr": "Ikindi duzeltmesi",
+          "adjust_maghrib": "Aksam duzeltmesi",
+          "adjust_isha": "Yatsi duzeltmesi",
+          "iqamah_fajr": "Sabah vakti",
+          "iqamah_dhuhr": "Ogle vakti",
+          "iqamah_asr": "Ikindi vakti",
+          "iqamah_maghrib": "Aksam vakti",
+          "iqamah_isha": "Yatsi vakti"
+        }
+      }
+    }
+  }
+}

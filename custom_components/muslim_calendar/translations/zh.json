@@ -1,0 +1,64 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "伊斯兰日历",
+        "description": "为您的位置配置伊斯兰日历集成。",
+        "data": {
+          "location": "位置",
+          "lat": "纬度（自定义）",
+          "lon": "经度（自定义）",
+          "method": "计算方法",
+          "fajr_angle": "晨礼（Fajr）角度（自定义）",
+          "isha_angle": "宵礼（Isha）角度（自定义）",
+          "adjust_fajr": "晨礼调整（分钟）",
+          "adjust_dhuhr": "晌礼调整（分钟）",
+          "adjust_asr": "晡礼调整（分钟）",
+          "adjust_maghrib": "昏礼调整（分钟）",
+          "adjust_isha": "宵礼调整（分钟）",
+          "iqamah_fajr": "晨礼Iqamah（分钟）",
+          "iqamah_dhuhr": "晌礼Iqamah（分钟）",
+          "iqamah_asr": "晡礼Iqamah（分钟）",
+          "iqamah_maghrib": "昏礼Iqamah（分钟）",
+          "iqamah_isha": "宵礼Iqamah（分钟）"
+        },
+        "data_description": {
+          "location": "选择zone.home或设备追踪器",
+          "lat": "仅用于自定义位置",
+          "lon": "仅用于自定义位置",
+          "method": "祈祷时间计算方法"
+        }
+      }
+    },
+    "error": {
+      "location_required": "自定义位置需要坐标。",
+      "invalid_location": "纬度或经度无效。"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "伊斯兰日历 - 选项",
+        "description": "修改参数。",
+        "data": {
+          "location": "位置",
+          "lat": "纬度",
+          "lon": "经度",
+          "method": "计算方法",
+          "fajr_angle": "晨礼角度（自定义）",
+          "isha_angle": "宵礼角度（自定义）",
+          "adjust_fajr": "晨礼调整",
+          "adjust_dhuhr": "晌礼调整",
+          "adjust_asr": "晡礼调整",
+          "adjust_maghrib": "昏礼调整",
+          "adjust_isha": "宵礼调整",
+          "iqamah_fajr": "晨礼Iqamah",
+          "iqamah_dhuhr": "晌礼Iqamah",
+          "iqamah_asr": "晡礼Iqamah",
+          "iqamah_maghrib": "昏礼Iqamah",
+          "iqamah_isha": "宵礼Iqamah"
+        }
+      }
+    }
+  }
+}

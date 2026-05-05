@@ -1,0 +1,64 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Calendario Islamico",
+        "description": "Configura la integracion del Calendario Islamico para tu ubicacion.",
+        "data": {
+          "location": "Ubicacion",
+          "lat": "Latitud (si personalizado)",
+          "lon": "Longitud (si personalizado)",
+          "method": "Metodo de calculo",
+          "fajr_angle": "Angulo Fajr (personalizado)",
+          "isha_angle": "Angulo Isha (personalizado)",
+          "adjust_fajr": "Ajuste Fajr (minutos)",
+          "adjust_dhuhr": "Ajuste Dhuhr (minutos)",
+          "adjust_asr": "Ajuste Asr (minutos)",
+          "adjust_maghrib": "Ajuste Maghrib (minutos)",
+          "adjust_isha": "Ajuste Isha (minutos)",
+          "iqamah_fajr": "Iqamah Fajr (minutos)",
+          "iqamah_dhuhr": "Iqamah Dhuhr (minutos)",
+          "iqamah_asr": "Iqamah Asr (minutos)",
+          "iqamah_maghrib": "Iqamah Maghrib (minutos)",
+          "iqamah_isha": "Iqamah Isha (minutos)"
+        },
+        "data_description": {
+          "location": "Selecciona zone.home o un rastreador de dispositivo",
+          "lat": "Solo necesario para ubicacion personalizada",
+          "lon": "Solo necesario para ubicacion personalizada",
+          "method": "Metodo de calculo de horarios de oracion"
+        }
+      }
+    },
+    "error": {
+      "location_required": "Coordenadas requeridas para ubicacion personalizada.",
+      "invalid_location": "Latitud o longitud no valida."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Calendario Islamico - Opciones",
+        "description": "Modifica los parametros.",
+        "data": {
+          "location": "Ubicacion",
+          "lat": "Latitud",
+          "lon": "Longitud",
+          "method": "Metodo de calculo",
+          "fajr_angle": "Angulo Fajr (personalizado)",
+          "isha_angle": "Angulo Isha (personalizado)",
+          "adjust_fajr": "Ajuste Fajr",
+          "adjust_dhuhr": "Ajuste Dhuhr",
+          "adjust_asr": "Ajuste Asr",
+          "adjust_maghrib": "Ajuste Maghrib",
+          "adjust_isha": "Ajuste Isha",
+          "iqamah_fajr": "Iqamah Fajr",
+          "iqamah_dhuhr": "Iqamah Dhuhr",
+          "iqamah_asr": "Iqamah Asr",
+          "iqamah_maghrib": "Iqamah Maghrib",
+          "iqamah_isha": "Iqamah Isha"
+        }
+      }
+    }
+  }
+}

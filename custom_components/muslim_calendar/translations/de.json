@@ -1,0 +1,64 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Muslimischer Kalender",
+        "description": "Konfigurieren Sie die Muslim Calendar Integration.",
+        "data": {
+          "location": "Standort",
+          "lat": "Breitengrad (wenn benutzerdefiniert)",
+          "lon": "Laengengrad (wenn benutzerdefiniert)",
+          "method": "Berechnungsmethode",
+          "fajr_angle": "Fajr Winkel (benutzerdefiniert)",
+          "isha_angle": "Isha Winkel (benutzerdefiniert)",
+          "adjust_fajr": "Fajr Anpassung (Minuten)",
+          "adjust_dhuhr": "Dhuhr Anpassung (Minuten)",
+          "adjust_asr": "Asr Anpassung (Minuten)",
+          "adjust_maghrib": "Maghrib Anpassung (Minuten)",
+          "adjust_isha": "Isha Anpassung (Minuten)",
+          "iqamah_fajr": "Iqamah Fajr (Minuten)",
+          "iqamah_dhuhr": "Iqamah Dhuhr (Minuten)",
+          "iqamah_asr": "Iqamah Asr (Minuten)",
+          "iqamah_maghrib": "Iqamah Maghrib (Minuten)",
+          "iqamah_isha": "Iqamah Isha (Minuten)"
+        },
+        "data_description": {
+          "location": "Waehlen Sie zone.home oder einen Geraetetracker",
+          "lat": "Nur fuer benutzerdefinierte Standorte erforderlich",
+          "lon": "Nur fuer benutzerdefinierte Standorte erforderlich",
+          "method": "Gebetszeiten-Berechnungsmethode"
+        }
+      }
+    },
+    "error": {
+      "location_required": "Koordinaten fuer benutzerdefinierte Standorte erforderlich.",
+      "invalid_location": "Breiten- oder Laengengrad ungueltig."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Muslimischer Kalender - Optionen",
+        "description": "Parameter aendern.",
+        "data": {
+          "location": "Standort",
+          "lat": "Breitengrad",
+          "lon": "Laengengrad",
+          "method": "Berechnungsmethode",
+          "fajr_angle": "Fajr Winkel (benutzerdefiniert)",
+          "isha_angle": "Isha Winkel (benutzerdefiniert)",
+          "adjust_fajr": "Fajr Anpassung",
+          "adjust_dhuhr": "Dhuhr Anpassung",
+          "adjust_asr": "Asr Anpassung",
+          "adjust_maghrib": "Maghrib Anpassung",
+          "adjust_isha": "Isha Anpassung",
+          "iqamah_fajr": "Iqamah Fajr",
+          "iqamah_dhuhr": "Iqamah Dhuhr",
+          "iqamah_asr": "Iqamah Asr",
+          "iqamah_maghrib": "Iqamah Maghrib",
+          "iqamah_isha": "Iqamah Isha"
+        }
+      }
+    }
+  }
+}
